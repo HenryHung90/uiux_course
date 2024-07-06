@@ -1,0 +1,16 @@
+extends layout
+
+block content
+  div.container
+    div.row.justify-content-center
+      div.col-sm-10.border.bg-light.rounded-3
+        h1.text-center.m-5.mb-0 #{title}
+        .row.justify-content-center
+          form(action="/auth/login", method="post").col-sm-7.m-5
+            .input-group.mb-3
+              span.input-group-text.col-sm-2 信箱
+              input.form-control(type='text', name="email")
+            .input-group.mb-3
+              span.input-group-text.col-sm-2 密碼
+              input.form-control(type='password', name="pw")
+            button#submit.btn.btn-outline-primary.w-100(type="submit")| 登入

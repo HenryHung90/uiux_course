@@ -1,0 +1,13 @@
+extends layout
+
+block content
+  div.container
+      div.row.justify-content-center
+        div.col-sm-10.border.bg-light.rounded-3
+          h1.text-center.m-5.mb-5 #{title}
+          .row.justify-content-center
+            .col-sm-7
+              .row.justify-content-center
+                .col.m-3.mb-5
+                  a#register.btn.btn-outline-primary.w-100(href="/auth/logout")| Logout
+              

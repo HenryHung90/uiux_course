@@ -1,0 +1,26 @@
+extends layout
+
+block content
+  link(rel="stylesheet", href="/stylesheets/register.css")
+  div.container
+    div.row.justify-content-center
+      div.col-sm-10.border.bg-light.rounded-3
+        h1.text-center.m-5.mb-0 #{title}
+        .row.justify-content-center
+          form(action="/auth/register", method="post").col-sm-7.m-5
+            .input-group.mb-3
+              span.input-group-text.col-sm-2 姓名
+              input.form-control(type='text', name="name")
+            .input-group.mb-3
+              span.input-group-text.col-sm-2 密碼
+              input.form-control(type='password', name="pw")
+            .input-group.mb-3
+              span.input-group-text.col-sm-2 信箱
+              input.form-control(type='email', name="email")
+            .input-group.mb-3 
+              .input-group-text.col-sm-3
+                input#isTeacher.form-check-input.mt-0.me-3(type='checkbox', name="isTeacher")
+                label.form-check-label(for='btn-check-4') 我是老師
+              input#tCodeInput.form-control(type='text', name="tCode", placeholder="請輸入註冊代碼", style="display: none;")
+            button#submit.btn.btn-outline-primary.w-100(type="submit")| 註冊
+  script(src='/javascripts/register.js')

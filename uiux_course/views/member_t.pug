@@ -1,0 +1,74 @@
+extends layout
+
+block content
+  .container-fluid
+    nav.navbar.navbar-expand-lg.bg-body-tertiary.mb-3
+      .container-fluid
+        a.navbar-brand(href='/t') U-U
+        button.navbar-toggler(type='button' data-bs-toggle='collapse' data-bs-target='#navbarSupportedContent' aria-controls='navbarSupportedContent' aria-expanded='false' aria-label='Toggle navigation')
+          span.navbar-toggler-icon
+        #navbarSupportedContent.collapse.navbar-collapse
+          ul.navbar-nav.me-auto.mb-2.mb-lg-0
+            li.nav-item
+              p.text-center.m-2 #{title}
+            
+          ul.navbar-nav.ms-auto.mb-2.mb-lg-0
+            li.nav-item
+              a.nav-link(href='/') 當學生一下
+            li.nav-item 
+              a.btn.btn-outline-dark.w-100(href="/auth/logout")| 登出
+    .row.py-2.px-4.mb-4
+      .col-sm-1.d-flex.align-items-center
+        h5#semester.m-0 1131 學期
+      .col-sm-2.d-flex.align-items-center
+        button#semesters.btn.dropdown-toggle.btn-outline-dark.me-2(href='#' role='button' data-bs-toggle='dropdown' aria-expanded='false' style="width: 50%;")| 課程學期
+          ul.dropdown-menu
+        button.btn.btn-outline-dark(href="/auth/logout" style="width: 50%;" data-bs-toggle='modal' data-bs-target='#addSemesterModal')| 新增學期
+        #addSemesterModal.modal.fade(tabindex='-1' aria-labelledby='addSemesterModal' aria-hidden='true')
+          .modal-dialog
+            .modal-content
+              .modal-header
+                h1#exampleModalLabel.modal-title.fs-5 新增學期
+                button.btn-close(type='button' data-bs-dismiss='modal' aria-label='Close')
+              .modal-body
+                .mb-3
+                  label.form-label(for='l-name') 學期
+                  input#semesterInput.form-control(type='text')
+              .modal-footer
+                button.btn.btn-secondary(type='button' data-bs-dismiss='modal') 取消
+                button.btn.btn-primary(type='button' onclick="addSemester()") 儲存
+    div.row.justify-content-center.px-5
+      div#lesson-list.col-sm-12.border.border-1.border-light-subtle.rounded-3.p-4
+        .row.w-100.m-0
+          .col-sm-2.ms-auto.d-flex.justify-content-end.p-0
+            button.btn.btn-outline-dark(type='button' data-bs-toggle='modal' data-bs-target='#addLessonModal')| 新增單元
+            #addLessonModal.modal.fade(tabindex='-1' aria-labelledby='exampleModalLabel' aria-hidden='true')
+              .modal-dialog
+                .modal-content
+                  .modal-header
+                    h1#exampleModalLabel.modal-title.fs-5 新增單元
+                    button.btn-close(type='button' data-bs-dismiss='modal' aria-label='Close')
+                  .modal-body
+                    .mb-3
+                      label.form-label(for='l-name') 教學單元
+                      input#l-name.form-control(type='text')
+                    .mb-3
+                      label.form-label(for='l-files') 教材上傳
+                      input#l-files.form-control(type='file' multiple='')
+                    .mb-3
+                      label.form-label(for='l-description') 作業說明
+                      textarea#l-description.form-control(rows='3')
+                  .modal-footer
+                    button.btn.btn-secondary(type='button' data-bs-dismiss='modal') 取消
+                    button.btn.btn-primary(type='button' onclick="addLesson()") 儲存
+        .row.w-100.m-0
+          table#lessons-table.table.table-hover
+            thead
+              tr
+                th(scope='col') #
+                th(scope='col') 教學單元
+                th(scope='col') 教材
+                th(scope='col') 作業
+                th(scope='col') 編輯
+            tbody
+  script(src='/javascripts/member_t.js')
