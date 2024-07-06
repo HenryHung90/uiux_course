@@ -130,4 +130,4 @@ dist
 .pnp.*
 
 # Custom additions
-public/uploads/
+/uiux_course/uploads
