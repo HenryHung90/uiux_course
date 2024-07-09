@@ -56,8 +56,17 @@ block content
                       label.form-label(for='l-files') 教材上傳
                       input#l-files.form-control(type='file' multiple='')
                     .mb-3
-                      label.form-label(for='l-description') 作業說明
-                      textarea#l-description.form-control(rows='3')
+                      label.form-label(for='l-homeworks') 
+                        span.me-3 作業
+                        button.btn.btn-outline-dark(type="button" onclick="newHomework()") + 
+                      table#l-homeworks.table.table-hover.border.border-1.border-light-subtle
+                        thead
+                          tr
+                            th(scope='col') 
+                            th(scope='col') #
+                            th(scope='col') 作業說明
+                        tbody
+                      //- textarea#l-description.form-control(rows='3')
                   .modal-footer
                     button.btn.btn-secondary(type='button' data-bs-dismiss='modal') 取消
                     button.btn.btn-primary(type='button' onclick="addLesson()") 儲存

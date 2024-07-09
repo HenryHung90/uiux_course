@@ -10,9 +10,10 @@ const lessonSchema = mongoose.Schema({
         path: String,
         contentType: String
     }],
-    description: {
-        type: String
-    },
+    hws: [{
+        id: String,
+        description: String
+    }],
     semester: {
         type: String,
         required: true

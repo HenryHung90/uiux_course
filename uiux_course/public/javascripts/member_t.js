@@ -7,14 +7,25 @@ $().ready(function() {
 function addLesson() {
     let l_name = $("#l-name").val();
     let l_files = $("#l-files")[0].files;
-    let l_description = $("#l-description").val();
-
+    
     if (!l_name) {
         alert("教學單元不應為空");
     } else {
         let formData = new FormData();
+        let homeworks = [];
         formData.append('name', l_name);
-        formData.append('description', l_description);
+        // Extract data from homework table
+        $("#l-homeworks tbody tr").each(function() {
+            if($(this).find("textarea").val()) {
+                homeworks.push({
+                    id: this.id,
+                    description: $(this).find("textarea").val()
+                })
+            }
+        });
+        if(homeworks) {
+            formData.append("hws", JSON.stringify(homeworks));
+        }
         formData.append('semester', currentSemester.name);
 
         // 添加文件到 formData 对象中
@@ -41,6 +52,43 @@ function addLesson() {
     }
 }
 
+function newHomework() {
+    let cTime = Date.now();
+    let tbLength = $("#l-homeworks tbody tr").length;
+    let newHw = `
+        <tr id="${cTime}">    
+            <td>
+                <button class="btn btn-outline-danger" type="button" onclick="rmHomework(${cTime})">-</button>
+            </td>
+            <td>
+                ${tbLength+1}
+            </td>
+            <td>
+                <textarea class="form-control" name="hw-${cTime}" rows="1"></textarea>
+            </td>
+        </tr>
+    `;
+    $("#l-homeworks tbody").append(newHw);
+}
+
+function rmHomework(hw_id) {
+    let isDelete = confirm("確定要刪除作業？\n刪除後無法復原");
+    if(isDelete) {
+        let originHwList = $("#l-homeworks tbody tr");
+        originHwList.each(function() {
+            if(this.id == hw_id) {
+                this.remove();
+            }
+        })
+
+        // Reorder
+        let currentHws = $("#l-homeworks tbody tr");
+        currentHws.each(function(index) {
+            $(this).find("td").eq(1).text(index+1);
+        })
+    } 
+}
+
 function fetchLessons() {
     $.post("/course/fetchLessons", {semester: currentSemester.name})
         .done((data) => {
@@ -48,7 +96,7 @@ function fetchLessons() {
             $("#lessons-table tbody").empty();
             for(let i = 0; i < lessons.length; i++) {
                 let lesson = lessons[i];
-                let newLesson = 
+                let newLesson = // TODO: id duplicate
                 `<tr>
                     <th scope="row">${i+1}</th>
                     <td id="${lesson._id}">${lesson.name}</td>
@@ -61,7 +109,15 @@ function fetchLessons() {
                             `).join('')}
                         </ul>
                     </td>
-                    <td id="${lesson._id}">${lesson.description}</td>
+                    <td id="${lesson._id}">
+                        <ul>
+                            ${lesson.hws.map(hw => `
+                                <li>
+                                    <p>${hw.description}</p>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </td>
                     <td> 
                         <button class="btn btn-outline-secondary" id="btnUpdate${lesson._id}" type="button">編輯</button>
                         <button class="btn btn-outline-secondary" id="btnRemove${lesson._id}" type="button" onclick='deleteLesson(${JSON.stringify(lesson)})'>刪除</button>

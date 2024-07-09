@@ -46,7 +46,7 @@ const upload = multer({storage: storage});
 router.post('/addLesson', isAuth, isTeacher, upload.any('files'), async function(req, res, next) {
     try{
         const files = req.files;
-        const { name, description, semester } = req.body;
+        const { name, hws, semester } = req.body;
         if(!name||!semester) {
             res.status(400).send("No lesson name or semester.");
         }
@@ -75,7 +75,7 @@ router.post('/addLesson', isAuth, isTeacher, upload.any('files'), async function
         } 
         const newLesson = new Lesson({
             name,
-            description,
+            hws: JSON.parse(hws),
             semester,
             files: fileInfos
         });
@@ -112,7 +112,10 @@ router.post("/deleteLesson", isAuth, isTeacher, async function(req, res, next) {
         // ));
 
         try {
-            await fsPromises.rm(`uploads/${lesson.semester}/t/${lesson.name}`,{ recursive: true});
+            const lessonDir = `uploads/${lesson.semester}/t/${lesson.name}`;
+            if(fs.existsSync(lessonDir)) {
+                await fsPromises.rm(lessonDir, { recursive: true});
+            }
         } catch (error) {
             console.error(`Error deleting directory ${dirPath}:`, error);
             errStr += `刪除目錄 ${dirPath} 失敗\n`;

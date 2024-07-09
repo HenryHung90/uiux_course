@@ -47,7 +47,7 @@ app.use(session({
   store: mongoStore.create({
     mongoUrl: process.env.mongodbUrl, // DB location
     collection: "session", // collection name
-    ttl: 60*24, // Default: 14 Days
+    ttl: 30 * 60, // 30 min
   }),
 }))
 
