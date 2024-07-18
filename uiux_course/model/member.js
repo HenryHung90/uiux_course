@@ -18,6 +18,9 @@ const memberSchema = mongoose.Schema({
         type: Boolean,
         required: true
     },
+    semester: [{
+        type: String
+    }],
     currentSemester: {
         type: String
     },

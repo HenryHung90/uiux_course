@@ -6,6 +6,7 @@ const fsPromises = require('fs').promises;
 const path = require('path');
 const Lesson = require("../model/lesson");
 const Semester = require("../model/semester");
+const memberModel = require('../model/member');
 
 // 登入確認 middleware
 const isAuth = (req, res, next) =>{
@@ -46,7 +47,8 @@ const upload = multer({storage: storage});
 router.post('/addLesson', isAuth, isTeacher, upload.any('files'), async function(req, res, next) {
     try{
         const files = req.files;
-        const { name, hws, semester } = req.body;
+        // const { name, hws, semester } = req.body;
+        const { name, links, semester } = req.body;
         if(!name||!semester) {
             res.status(400).send("No lesson name or semester.");
         }
@@ -75,7 +77,8 @@ router.post('/addLesson', isAuth, isTeacher, upload.any('files'), async function
         } 
         const newLesson = new Lesson({
             name,
-            hws: JSON.parse(hws),
+            // hws: JSON.parse(hws),
+            links: JSON.parse(links),
             semester,
             files: fileInfos
         });
@@ -88,6 +91,77 @@ router.post('/addLesson', isAuth, isTeacher, upload.any('files'), async function
         res.status(500).send('Error uploading the file.');
     }
 });
+
+router.post("/addMat", isAuth, isTeacher, upload.any('files'), async function(req, res, next) {
+    const files = req.files;
+    const {id, links} = req.body;
+    let fileInfos = [];
+
+    try{
+        if(files && files.length > 0) {
+            const filePromises = files.map(file => {
+                const { path, originalname, mimetype } = file;
+        
+                return new Promise(async (resolve, reject) => {
+                    fs.readFile(path, (err, data) => {
+                        if (err) {
+                        return reject(err);
+                        }
+            
+                        const fileInfo = {
+                            name: originalname,
+                            path: path,
+                            contentType: mimetype
+                        };
+            
+                        resolve(fileInfo);
+                    });
+                });
+            });
+            fileInfos = await Promise.all(filePromises);
+        }
+
+        await Lesson.updateOne({_id: id}, {
+            $push: {
+                files: fileInfos,
+                links: JSON.parse(links)
+            }
+        })
+        console.log("Add material success");
+        res.sendStatus(201);
+    } catch(error) {
+        console.error("Add material failed: ", error);
+        res.sendStatus(500);
+    }
+})
+
+router.post("/deleteMat", isAuth, isTeacher, async function(req, res, next) {
+    const {lesson_id, file_id, link_id} = req.body;
+    try {
+        if(file_id) {
+            const file = await Lesson.findOne({_id: lesson_id, 'files._id': file_id}, {"files.$": 1});
+            if(fs.existsSync(file.files[0].path)) {
+                await fsPromises.rm(file.files[0].path, { recursive: true});
+            }
+            await Lesson.updateOne({_id: lesson_id}, {
+                $pull: {
+                    files: {_id: file.files[0]._id}
+                }
+            })
+        } else {
+            await Lesson.updateOne({_id: lesson_id},{
+                $pull: {
+                    links: {_id: link_id}
+                }
+            })
+        }
+        res.sendStatus(200);
+    } catch (error) {
+        console.error("Delete material error: ", error);
+        console.trace();
+        res.sendStatus(500);
+    }
+})
 
 router.post("/deleteLesson", isAuth, isTeacher, async function(req, res, next) {
     const {lessonId} = req.body;
@@ -143,7 +217,7 @@ router.post("/deleteLesson", isAuth, isTeacher, async function(req, res, next) {
 //         console.log("Finding lessons error: ", e);
 //     }
 // });
-router.post("/fetchLessons", isAuth, isTeacher, async function(req, res, next) {
+router.post("/fetchLessons", isAuth, async function(req, res, next) {
     try {
         const {semester} = req.body;
         const lessons = await Lesson.find({semester});
@@ -159,9 +233,10 @@ router.post('/addSemester', isAuth, isTeacher, async function(req, res, next) {
         if(!name) {
             res.status(400).send("No semester.");
         }
+        let semesterID = name+Date.now();
         const newSemester = new Semester({
             name,
-            id: name+Date.now()
+            id: semesterID
         });
         
         await newSemester.save();
@@ -179,6 +254,45 @@ router.post("/fetchSemesters", isAuth, isTeacher, async function(req, res, next)
         res.send(JSON.stringify(semester));
     } catch(e) {
         console.log("Finding lessons error: ", e);
+    }
+});
+
+router.post("/fetchSemesters/stu", isAuth, async function(req, res, next) {
+    try {
+        let stu = await memberModel.findOne({email: req.session.email});
+        let semesters = await Promise.all(
+            stu.semester.map(async s => {
+                let semester = await Semester.findOne({id: s});
+                return semester;
+            })
+        );
+        res.send(JSON.stringify(semesters));
+    } catch(e) {
+        console.log("Finding lessons error: ", e);
+    }
+});
+
+//===== Student
+router.get('/join/', isAuth, async function(req, res, next) {
+    const sCode = req.query.s_code;
+    try {
+        let semester = await Semester.findOne({id: sCode});
+        if(!semester) {
+            return res.redirect("/?err=學期代碼錯誤");
+        }
+        const result = await memberModel.updateOne({email: req.session.email}, {
+            $addToSet: {
+                semester: req.query.s_code
+            },
+            $set: {
+                currentSemester: req.query.s_code
+            }
+        });
+        console.log("Update result: "+ result);
+        res.redirect("/?msg=課程加入成功！");
+    } catch(error) {
+        console.error('Error updating member:', error);
+        res.redirect("/?err=學期加入失敗：系統錯誤");
     }
 });
 

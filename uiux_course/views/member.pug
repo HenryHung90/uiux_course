@@ -1,13 +1,72 @@
 extends layout
 
 block content
-  div.container
-      div.row.justify-content-center
-        div.col-sm-10.border.bg-light.rounded-3
-          h1.text-center.m-5.mb-5 #{title}
-          .row.justify-content-center
-            .col-sm-7
-              .row.justify-content-center
-                .col.m-3.mb-5
-                  a#register.btn.btn-outline-primary.w-100(href="/auth/logout")| Logout
+  link(rel="stylesheet", href="/stylesheets/member.css")
+  .container-fluid
+    nav.navbar.navbar-expand-lg.bg-body-tertiary.mb-3
+      .container-fluid
+        a.navbar-brand(href='/') U-U
+        button.navbar-toggler(type='button' data-bs-toggle='collapse' data-bs-target='#navbarSupportedContent' aria-controls='navbarSupportedContent' aria-expanded='false' aria-label='Toggle navigation')
+          span.navbar-toggler-icon
+        #navbarSupportedContent.collapse.navbar-collapse
+          ul.navbar-nav.me-auto.mb-2.mb-lg-0
+            li.nav-item
+              p.text-center.m-2 #{title}
+            
+          ul.navbar-nav.ms-auto.mb-2.mb-lg-0
+            li#beTeacher.nav-item
+              a.nav-link(href='/') 探索
+            li#beTeacher.nav-item
+              a.nav-link(href='/t') 當老師一下
+            li.nav-item 
+              a.btn.btn-outline-dark.w-100(href="/auth/logout")| 登出
+    .row.py-2.px-4.mb-4
+      .col-sm-1.d-flex.align-items-center
+        h5#semester.m-0 
+      .col-sm-2.d-flex.align-items-center
+        button#semesters.btn.dropdown-toggle.btn-outline-dark.me-2(href='#' role='button' data-bs-toggle='dropdown' aria-expanded='false' style="width: 50%;")| 課程學期
+          ul.dropdown-menu
+        button.btn.btn-outline-dark(href="/auth/logout" style="width: 50%;" data-bs-toggle='modal' data-bs-target='#addSemesterModal')| 加入課程
+        #addSemesterModal.modal.fade(tabindex='-1' aria-labelledby='addSemesterModal' aria-hidden='true')
+          form#addLessonForm(action="course/join", method="get") 
+            .modal-dialog
+              .modal-content
+                .modal-header
+                  h1#exampleModalLabel.modal-title.fs-5 加入課程
+                  button.btn-close(type='button' data-bs-dismiss='modal' aria-label='Close')
+                .modal-body
+                  .mb-3
+                    label.form-label(for='s-addCode') 課程代碼
+                    input#s-addCode.form-control(type='text' name="s_code" Placeholder="請輸入課程代碼" required)
+                .modal-footer
+                  button.btn.btn-secondary(type='button' data-bs-dismiss='modal') 取消
+                  button.btn.btn-primary(type='submit') 加入
+    div.row.justify-content-center.px-4
+      div#lesson-list.col-sm-12.border.border-1.border-light-subtle.rounded-3.px-2.py-3
+        div.row.w-100.m-0
+          .col-sm-2
+            h5.mb-3 教學單元
+            div#lesson-name-list.border.border-2.border-subtitle.rounded-4
+          .col-sm-9
+            h5.mb-3 單元專區
+            ul#pills-tab.nav.nav-pills.mb-3(role='tablist')
+              li.nav-item.me-3(role='presentation')
+                button#pills-homework-tab.nav-link.active(data-bs-toggle='pill' data-bs-target='#pills-homework' type='button' role='tab' aria-controls='pills-homework' aria-selected='true') 作業
+              li.nav-item(role='presentation')
+                button#pills-material-tab.nav-link(data-bs-toggle='pill' data-bs-target='#pills-material' type='button' role='tab' aria-controls='pills-material' aria-selected='false') 教材
+            #pills-tabContent.tab-content
+              #pills-homework.tab-pane.fade.show.active(role='tabpanel' aria-labelledby='pills-homework-tab' tabindex='0') 
+                table#homework-table.table.table-hover
+                  thead
+                    tr
+                      th(scope='col') #
+                      th(scope='col') 名稱
+                      th(scope='col') 內容
+                      th(scope='col') 資源
+                      th(scope='col') 屬性
+                      th(scope='col') 主題
+                      th(scope='col') 交作業
+                  tbody
+              #pills-material.tab-pane.fade(role='tabpanel' aria-labelledby='pills-material-tab' tabindex='0') 
+  script(src='/javascripts/member.js')
               

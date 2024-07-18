@@ -10,6 +10,9 @@ const lessonSchema = mongoose.Schema({
         path: String,
         contentType: String
     }],
+    links:[{
+        url: String
+    }],
     hws: [{
         id: String,
         description: String

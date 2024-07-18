@@ -1,0 +1,12 @@
+.lesson-list:hover, .lesson-list-chosen {
+    background-color: whitesmoke;
+}
+.lesson-list:first-child {
+    border-top-left-radius: var(--bs-border-radius-xl)!important;
+    border-top-right-radius: var(--bs-border-radius-xl)!important;
+}
+.lesson-list:last-child {
+    border-bottom-left-radius: var(--bs-border-radius-xl)!important;
+    border-bottom-right-radius: var(--bs-border-radius-xl)!important;
+    border: 0px!important;
+}

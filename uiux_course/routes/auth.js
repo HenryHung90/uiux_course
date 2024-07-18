@@ -13,7 +13,7 @@ router.get('/register', function(req, res, next) {
 
 router.post("/register", async function(req, res, next) {
     // Whether field not empty
-    const {name, pw, email, isTeacher, tCode} = req.body;
+    const {name, pw, email, isTeacher, tCode, studentID} = req.body;
     if(!name || !email || !pw) {
       console.log("No data", name, email, pw);
       return res.redirect("register"); // TODO: add error msg to client
@@ -34,10 +34,12 @@ router.post("/register", async function(req, res, next) {
         } else {
             isT = true;
         }
-    } 
+    } else if(!studentID) {
+        return res.redirect("register"); // TODO: add error msg to client
+    }
     // Create account
     const hashPW = await bcrypt.hash(pw, 10); // Hash the pw
-    member = new memberModel({name, email, pw: hashPW, isTeacher: isT});
+    member = new memberModel({name, email, pw: hashPW, isTeacher: isT, studentID});
     await member.save();
     res.redirect("login"); // TODO: add error msg to client
 });
@@ -68,13 +70,18 @@ router.post("/login", async function(req, res, next) {
     bcrypt.compare(pw, member.pw, function(err, result) {
         if(err){
             console.log(err)
-            res.status(404).json({
+            return res.status(404).json({
                 status:404,
                 reason:''
             })
+        } 
+        if (!result) {
+            console.log("Password doesn't match");
+            return res.redirect("login");
         }
         req.session.isAuth = true;
         req.session.name = member.name;
+        req.session.email = member.email;
         req.session.isTeacher = member.isTeacher;
         if(member.isTeacher){res.redirect("/t");}
         else {res.redirect("/");}

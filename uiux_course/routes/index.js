@@ -19,7 +19,7 @@ const isTeacher = (req, res, next) =>{
 
 /* GET home page. */
 router.get('/', isAuth, function(req, res, next) {
-  res.render('member', {title: "Welcome Back, "+req.session.name});
+  res.render('member', {title: req.session.name+" 同學"});
 });
 
 router.get('/t', isAuth, isTeacher, function(req, res, next) {
