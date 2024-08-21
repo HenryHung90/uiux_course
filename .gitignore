@@ -131,3 +131,4 @@ dist
 
 # Custom additions
 /uiux_course/uploads
+.vscode/settings.json

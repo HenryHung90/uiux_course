@@ -7,6 +7,7 @@ const path = require('path');
 const Lesson = require("../model/lesson");
 const Semester = require("../model/semester");
 const memberModel = require('../model/member');
+const submissionModel = require("../model/submission");
 
 // 登入確認 middleware
 const isAuth = (req, res, next) =>{
@@ -29,7 +30,12 @@ const storage = multer.diskStorage({
         const { name, semester } = req.body;
         const files = req.files;
         if(files && files.length > 0) {
-            const userDir = `uploads/${semester}/t/${name}`;
+            let userDir = `uploads/${semester}`;
+            if(req.session.isTeacher) {
+                userDir += `/t/${name}`;
+            } else {
+                userDir += `/s/${name}`; 
+            }
             req.uploadDir = userDir;
     
             if (!fs.existsSync(userDir)){
@@ -92,77 +98,6 @@ router.post('/addLesson', isAuth, isTeacher, upload.any('files'), async function
     }
 });
 
-router.post("/addMat", isAuth, isTeacher, upload.any('files'), async function(req, res, next) {
-    const files = req.files;
-    const {id, links} = req.body;
-    let fileInfos = [];
-
-    try{
-        if(files && files.length > 0) {
-            const filePromises = files.map(file => {
-                const { path, originalname, mimetype } = file;
-        
-                return new Promise(async (resolve, reject) => {
-                    fs.readFile(path, (err, data) => {
-                        if (err) {
-                        return reject(err);
-                        }
-            
-                        const fileInfo = {
-                            name: originalname,
-                            path: path,
-                            contentType: mimetype
-                        };
-            
-                        resolve(fileInfo);
-                    });
-                });
-            });
-            fileInfos = await Promise.all(filePromises);
-        }
-
-        await Lesson.updateOne({_id: id}, {
-            $push: {
-                files: fileInfos,
-                links: JSON.parse(links)
-            }
-        })
-        console.log("Add material success");
-        res.sendStatus(201);
-    } catch(error) {
-        console.error("Add material failed: ", error);
-        res.sendStatus(500);
-    }
-})
-
-router.post("/deleteMat", isAuth, isTeacher, async function(req, res, next) {
-    const {lesson_id, file_id, link_id} = req.body;
-    try {
-        if(file_id) {
-            const file = await Lesson.findOne({_id: lesson_id, 'files._id': file_id}, {"files.$": 1});
-            if(fs.existsSync(file.files[0].path)) {
-                await fsPromises.rm(file.files[0].path, { recursive: true});
-            }
-            await Lesson.updateOne({_id: lesson_id}, {
-                $pull: {
-                    files: {_id: file.files[0]._id}
-                }
-            })
-        } else {
-            await Lesson.updateOne({_id: lesson_id},{
-                $pull: {
-                    links: {_id: link_id}
-                }
-            })
-        }
-        res.sendStatus(200);
-    } catch (error) {
-        console.error("Delete material error: ", error);
-        console.trace();
-        res.sendStatus(500);
-    }
-})
-
 router.post("/deleteLesson", isAuth, isTeacher, async function(req, res, next) {
     const {lessonId} = req.body;
     let errStr = "";
@@ -224,6 +159,240 @@ router.post("/fetchLessons", isAuth, async function(req, res, next) {
         res.send(JSON.stringify(lessons));
     } catch(e) {
         console.log("Finding lessons error: ", e);
+    }
+});
+
+router.post("/addMat", isAuth, isTeacher, upload.any('files'), async function(req, res, next) {
+    const files = req.files;
+    const {id, links} = req.body;
+    let fileInfos = [];
+
+    try{
+        if(files && files.length > 0) {
+            const filePromises = files.map(file => {
+                const { path, originalname, mimetype } = file;
+        
+                return new Promise(async (resolve, reject) => {
+                    fs.readFile(path, (err, data) => {
+                        if (err) {
+                            return reject(err);
+                        }
+            
+                        const fileInfo = {
+                            name: originalname,
+                            path: path,
+                            contentType: mimetype
+                        };
+            
+                        resolve(fileInfo);
+                    });
+                });
+            });
+            fileInfos = await Promise.all(filePromises);
+        }
+
+        await Lesson.updateOne({_id: id}, {
+            $push: {
+                files: fileInfos,
+                links: JSON.parse(links)
+            }
+        })
+        console.log("Add material success");
+        res.sendStatus(201);
+    } catch(error) {
+        console.error("Add material failed: ", error);
+        res.sendStatus(500);
+    }
+})
+
+router.post("/deleteMat", isAuth, isTeacher, async function(req, res, next) {
+    const {lesson_id, file_id, link_id} = req.body;
+    try {
+        if(file_id) {
+            const file = await Lesson.findOne({_id: lesson_id, 'files._id': file_id}, {"files.$": 1});
+            if(fs.existsSync(file.files[0].path)) {
+                await fsPromises.rm(file.files[0].path, { recursive: true});
+            }
+            await Lesson.updateOne({_id: lesson_id}, {
+                $pull: {
+                    files: {_id: file.files[0]._id}
+                }
+            })
+        } else {
+            await Lesson.updateOne({_id: lesson_id},{
+                $pull: {
+                    links: {_id: link_id}
+                }
+            })
+        }
+        res.sendStatus(200);
+    } catch (error) {
+        console.error("Delete material error: ", error);
+        console.trace();
+        res.sendStatus(500);
+    }
+})
+
+router.post("/addHw", isAuth, isTeacher, upload.any('files'), async function(req, res, next) {
+    const files = req.files;
+    let fileInfos = [];
+    const {
+        id,
+        name,
+        description,
+        links,
+        attribute,
+        isRegular,
+        isCatCustom,
+        categories
+      } = req.body;
+    try {
+        // files
+        if(files && files.length > 0) {
+            const filePromises = files.map((file) => {
+                const {path, originalname, mimetype} = file;
+                
+                return new Promise(async (resolve, reject) => {
+                    fs.readFile(path, (err, data) => {
+                        if(err) {
+                            return reject(err);
+                        }
+
+                        const fileInfo = {
+                            name: originalname,
+                            path: path,
+                            contentType: mimetype
+                        }
+                        
+                        resolve(fileInfo);
+                    })
+                })
+            })
+            fileInfos = await Promise.all(filePromises);
+        }
+
+        await Lesson.updateOne({_id: id}, {
+            $push: {
+                hws: {
+                    name,
+                    description,
+                    files: fileInfos,
+                    links: links?JSON.parse(links):{},
+                    attribute,
+                    isRegular,
+                    isCatCustom,
+                    categories: categories?JSON.parse(categories):{}
+                }
+            }
+        })
+
+        // Retrieve the newly created homework ID
+        const updatedLesson = await Lesson.findById(id);
+        const newHomework = updatedLesson.hws[updatedLesson.hws.length - 1]; // Last added homework
+        const hwId = newHomework._id;
+
+        // Create and save the new submission record
+        const newSubmissionRecord = new submissionModel({
+            hwId: hwId
+        });
+
+        await newSubmissionRecord.save();
+
+        res.sendStatus(200);
+    } catch (error) {
+        console.error("Add homework error: ", error);
+        console.trace();
+        res.sendStatus(500)
+    }
+});
+
+router.post("/rmHw", isAuth, isTeacher, async function(req, res, next) {
+    const { lessonId, homeworkId } = req.body;
+    let errStr = "";
+    try {
+        // Find the lesson by id
+        const hw = await Lesson.findOne({_id: lessonId, 'hws._id': homeworkId}, {'hws.$': 1}); // .$ 符合的文，1 返回，0 不返回
+        if(!hw) {
+            return res.status(404).send("作業找不到");
+        }
+
+        // File
+        if(hw.files && hw.files.length > 0) {
+            try {
+                await Promise.all(hw.files.map(async (file) => {
+                    if(fs.existsSync(file.path)) {
+                        await fsPromises.rm(lessonDir, { recursive: true});
+                    }
+                }))
+            } catch (error) {
+                console.error(`Error deleting file :`, error);
+                errStr += `刪除檔案失敗\n`;
+            }
+        }
+
+        await Lesson.updateOne(
+            {_id: lessonId},
+            {$pull: {hws:{_id: homeworkId}}}
+        )
+        
+        // Error check
+        if(errStr.length > 0) {
+            throw new Error(errStr);
+        } else {
+            res.sendStatus(200);
+        }
+    } catch (error) {
+        console.log("Delete homework error:\n", error.message);
+        res.sendStatus(500);
+    }
+})
+
+router.post('/fetchHomework', isAuth, isTeacher, async function(req, res, next) {
+    try {
+        const {semester_id, hw_id} = req.body;
+        // Add student into submission db (who doesn't submit)
+        // Find all student in current semester
+        const studentsInSemester = await memberModel.find({
+            isTeacher: false,
+            semester: semester_id
+        });
+
+        // Find submission in given hws
+        const submissionArea = await submissionModel.findOne({hwId: hw_id});
+
+        let studentsWithNoSubmissions = [];
+
+        // Extract student IDs who have already submitted
+        const submittedStudentIds = submissionArea.submissions.map(submission => submission.studentId);
+
+        // Filter out students who haven't submitted
+        studentsWithNoSubmissions = studentsInSemester.filter(student => !submittedStudentIds.includes(student.studentID));
+        
+        // Prepare submissions for students with no submissions
+        const newSubmissions = studentsWithNoSubmissions.map(student => ({
+            isHandIn: false,
+            studentId: student.studentID,
+            studentName: student.name,
+            handInData: {
+                links: [],
+                files: []
+            },
+            feedback: '',
+            score: 0,
+            analysis: {
+                result: []
+            }
+        }));
+
+        submissionArea.submissions.push(...newSubmissions);
+        await submissionArea.save();
+
+        // Query and res result
+        let updateSubmissions = await submissionModel.findOne({hwId: hw_id});
+        res.send(JSON.stringify(updateSubmissions));
+    } catch(error) {
+        console.log(error);
+        res.sendStatus(500).send('Error fetching hand ins.');
     }
 });
 

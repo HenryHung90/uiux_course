@@ -14,8 +14,29 @@ const lessonSchema = mongoose.Schema({
         url: String
     }],
     hws: [{
-        id: String,
-        description: String
+        name: String,
+        description: String,
+        files: [{
+            name: String,
+            path: String,
+            contentType: String
+        }],
+        links:[{
+            url: String
+        }],
+        attribute: String, // p: personal, g: group
+        isHandInByIndividual: Boolean,
+        isRegular: Boolean,
+        isCatCustom: Boolean,
+        categories: [{
+            name: String,
+            member: [{
+                studentID: String,
+                studentName: String,
+                memberId: String, // To make sure same person
+            }]
+        }],
+        isAnalysis: Boolean
     }],
     semester: {
         type: String,

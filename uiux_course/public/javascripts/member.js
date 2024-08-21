@@ -45,6 +45,33 @@ function fetchLessons() {
                 lesson = lessons[i];
                 let newLesson = 
                     `<button class="btn w-100 text-start p-2 border-bottom border-1 border-light-subtitle lesson-list" type="button" id="${lesson._id}Btn" onclick="showLessonData('${i}')">${lesson.name}</button>`;
+                // `<tr>
+                //     <th scope="row">${i+1}</th>
+                //     <td id="${lesson._id}">${lesson.name}</td>
+                //     <td id="${lesson._id}">
+                //         <ul>
+                //             ${lesson.files.map(file => `
+                //                 <li>
+                //                     <a href="course/lessons/${lesson._id}/files/${file._id}" target="_blank">${file.name}</a>
+                //                 </li>
+                //             `).join('')}
+                //         </ul>
+                //     </td>
+                //     <td id="${lesson._id}">
+                //         <ul>
+                //             ${lesson.hws.map(hw => `
+                //                 <li>
+                //                     <p>${hw.description}</p>
+                //                 </li>
+                //             `).join('')}
+                //         </ul>
+                //     </td>
+                //     <td> 
+                //         <button class="btn btn-outline-secondary" id="btnUpdate${lesson._id}" type="button">編輯</button>
+                //         <button class="btn btn-outline-secondary" id="btnRemove${lesson._id}" type="button" onclick='deleteLesson(${JSON.stringify(lesson)})'>刪除</button>
+                //     </td>
+                // </tr>` 
+                // $("#lessons-table tbody").append(newLesson);
                 $("#lesson-name-list").append(newLesson);
             }
             // Click 1st lesson
