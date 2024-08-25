@@ -349,7 +349,7 @@ router.post("/rmHw", isAuth, isTeacher, async function(req, res, next) {
 
 router.post('/fetchHomework', isAuth, isTeacher, async function(req, res, next) {
     try {
-        const {semester_id, hw_id} = req.body;
+        const {semester_id, hw_id, attribute} = req.body;
         // Add student into submission db (who doesn't submit)
         // Find all student in current semester
         const studentsInSemester = await memberModel.find({
@@ -358,7 +358,17 @@ router.post('/fetchHomework', isAuth, isTeacher, async function(req, res, next) 
         });
 
         // Find submission in given hws
-        const submissionArea = await submissionModel.findOne({hwId: hw_id});
+        let submissionArea = await submissionModel.findOne({hwId: hw_id});
+
+        if(!submissionArea) {
+            // Create and save the new submission record
+            const newSubmissionRecord = new submissionModel({
+                hwId: hw_id
+            });
+
+            await newSubmissionRecord.save();
+            submissionArea = await submissionModel.findOne({hwId: hw_id});
+        } 
 
         let studentsWithNoSubmissions = [];
 
@@ -377,18 +387,39 @@ router.post('/fetchHomework', isAuth, isTeacher, async function(req, res, next) 
                 links: [],
                 files: []
             },
+            category: { 
+                name: '',
+                catId: '',
+            },
             feedback: '',
             score: 0,
             analysis: {
                 result: []
             }
         }));
-
         submissionArea.submissions.push(...newSubmissions);
         await submissionArea.save();
-
         // Query and res result
-        let updateSubmissions = await submissionModel.findOne({hwId: hw_id});
+        let updateSubmissions;
+        if(attribute == 'p') {
+            updateSubmissions = await submissionModel.findOne({hwId: hw_id});
+        } else {
+            updateSubmissions = await submissionModel.aggregate([
+                {
+                    $match: { hwId: hw_id }
+                },
+                {
+                    $unwind: "$submissions"
+                },
+                {
+                    $group: {
+                        _id: "submissions.category.catId",
+                        // Push same group of submission into an array
+                        submissions: {$push: "$submissions"} 
+                    }
+                }
+            ])
+        }
         res.send(JSON.stringify(updateSubmissions));
     } catch(error) {
         console.log(error);

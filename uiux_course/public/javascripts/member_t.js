@@ -327,15 +327,15 @@ function removeHomework(lesson_id, hw_id) {
     }
 }
 
-function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis) {
+function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandInByIndividual) {
     const correctingModalObject = new bootstrap.Modal("#correctingModal");
     let correctingModal = $("#correctingModal");
     //TODO Display loading
+    
     // hide / show analysis column
-
     $("#anaTh").attr("style", `display: ${isAnalysis ? '' : 'none'};`);
     // Fetch hand ins and calculate hand in status
-    $.post("/course/fetchHomework", {semester_id: currentSemester.id, hw_id})
+    $.post("/course/fetchHomework", {semester_id: currentSemester.id, hw_id, attribute})
         .done((data) => {
             let resData = JSON.parse(data);
             let submissions = resData.submissions;
@@ -344,58 +344,180 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis) {
             $("#correctingModal .modal-title").text("批改作業-"+hw_name);
             let tbody = $("#submissionTable > tbody");
             tbody.empty();
-            console.log(tbody);
             let handinNums = 0;
-            submissions.forEach((submission, index) => {
-                let isHandIn = submission.isHandIn;
-                if(isHandIn){handinNums++;}
-                let newRow = `<tr class="border rounded">
-                    <td>${index+1}</td>
-                    <td>${submission.studentId}</td>
-                    <td>${submission.studentName}</td>
-                    <td> 
-                        <ul class="m-0">
-                            ${submission.handInData.files ? submission.handInData.files.map(file => `
-                                <li>    
-                                    <a href="${file.path}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;"><img src="./images/file.svg" alt=""></a>
-                                </li>
-                            `).join('') : ''}
-                            ${submission.handInData.links ? submission.handInData.links.map(link => `
-                                <li>    
-                                    <a href="${link.url}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;"><img src="./images/link.svg" alt=""></a>
-                                </li>
-                            `).join('') : ''}
-                        </ul>
-                    </td>
-                    <td>${/**TODO */}</td>
-                    <td><textarea class="form-control" id="textarea_stuId" name="" rows="2">${isHandIn?'':'未繳交作業'}</textarea></td>
-                    <td style="width: 10%"><input class="form-control" type="text" name="" value="${isHandIn?"":0}"></td>
-                    <td style="display: ${isAnalysis?'':'none'}"> 
-                        <div class="accordion">
-                            <div class="accordion-item"> 
-                                <h2 class="accordion-header"> 
-                                    <button class="fw-bold accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseStuId${submission._id}" aria-expanded="false" aria-controls="collapseStuId">分析結果</button>
-                                </h2>
-                                <div class="accordion-collapse collapse" id="collapseStuId${submission._id}">
-                                    <div class="accordion-body">
-                                        ${submission.analysis.result.length>0 ? 
-                                        submission.analysis.result.map(result => {`
-                                                <strong>${result.title}</strong>
-                                                <p>${result.content}</p>
-                                                `}).join('') : 
-                                                `<p>暫無分析結果 😵‍💫</p>`}
+            if(attribute == 'p') {
+                submissions.forEach((submission, index) => {
+                    let isHandIn = submission.isHandIn;
+                    if(isHandIn){handinNums++;}
+                    let newRow = `<tr class="border rounded">
+                        <td>${index+1}</td>
+                        <td>${submission.studentId}</td>
+                        <td>${submission.studentName}</td>
+                        <td> 
+                            <ul class="m-0">
+                                ${submission.handInData.files ? submission.handInData.files.map(file => `
+                                    <li>    
+                                        <a href="${file.path}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;"><img src="./images/file.svg" alt=""></a>
+                                    </li>
+                                `).join('') : ''}
+                                ${submission.handInData.links ? submission.handInData.links.map(link => `
+                                    <li>    
+                                        <a href="${link.url}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;"><img src="./images/link.svg" alt=""></a>
+                                    </li>
+                                `).join('') : ''}
+                            </ul>
+                        </td>
+                        <td>${submission.category.name ? submission.category.name : ''}</td>
+                        <td><textarea class="form-control" id="textarea_stuId" name="" rows="2">${isHandIn?'':'未繳交作業'}</textarea></td>
+                        <td style="width: 10%"><input class="form-control" type="text" name="" value="${isHandIn?"":0}"></td>
+                        <td style="display: ${isAnalysis?'':'none'}"> 
+                            <div class="accordion">
+                                <div class="accordion-item"> 
+                                    <h2 class="accordion-header"> 
+                                        <button class="fw-bold accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseStuId${submission._id}" aria-expanded="false" aria-controls="collapseStuId">分析結果</button>
+                                    </h2>
+                                    <div class="accordion-collapse collapse" id="collapseStuId${submission._id}">
+                                        <div class="accordion-body">
+                                            ${submission.analysis.result.length>0 ? 
+                                            submission.analysis.result.map(result => {`
+                                                    <strong>${result.title}</strong>
+                                                    <p>${result.content}</p>
+                                                    `}).join('') : 
+                                                    `<p>暫無分析結果 😵‍💫</p>`}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </td>
-                </tr>`
-                console.log(index, submission);
-                tbody.append(newRow);
-            });
-            $("#hangInProgress > .progress-bar")
-            .attr("style", `width: ${handinNums/submissions.length * 100}%`)
-            .text(`${handinNums} / ${submissions.length}`);
+                        </td>
+                    </tr>`
+                    console.log(index, submission);
+                    tbody.append(newRow);
+                });
+                $("#hangInProgress > .progress-bar")
+                    .attr("style", `width: ${handinNums/submissions.length * 100}%`)
+                    .text(`${handinNums} / ${submissions.length}`);
+            } else {
+                if(isHandInByIndividual) {
+                    let stuNum = 1;
+                    submissions.forEach((groupSubmission) => {
+                        groupSubmission.submissions.forEach((submission, index) => {
+                            stuNum++;
+                            let isHandIn = submission.isHandIn;
+                            if(isHandIn){handinNums++;}
+                            let newRow = `<tr class="border rounded">
+                                <td>${stuNum}</td>
+                                <td>${submission.studentId}</td>
+                                <td>${submission.studentName}</td>
+                                <td> 
+                                    <ul class="m-0">
+                                        ${submission.handInData.files ? submission.handInData.files.map(file => `
+                                            <li>    
+                                                <a href="${file.path}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;"><img src="./images/file.svg" alt=""></a>
+                                            </li>
+                                        `).join('') : ''}
+                                        ${submission.handInData.links ? submission.handInData.links.map(link => `
+                                            <li>    
+                                                <a href="${link.url}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;"><img src="./images/link.svg" alt=""></a>
+                                            </li>
+                                        `).join('') : ''}
+                                    </ul>
+                                </td>
+                                ${index==0?`<td rowspan="${groupSubmission.length}">${submission.category.name}</td>`:``}
+                                <td><textarea class="form-control" id="textarea_stuId" name="" rows="2">${isHandIn?'':'未繳交作業'}</textarea></td>
+                                <td style="width: 10%"><input class="form-control" type="text" name="" value="${isHandIn?"":0}"></td>
+                                <td style="display: ${isAnalysis?'':'none'}"> 
+                                    <div class="accordion">
+                                        <div class="accordion-item"> 
+                                            <h2 class="accordion-header"> 
+                                                <button class="fw-bold accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseStuId${submission._id}" aria-expanded="false" aria-controls="collapseStuId">分析結果</button>
+                                            </h2>
+                                            <div class="accordion-collapse collapse" id="collapseStuId${submission._id}">
+                                                <div class="accordion-body">
+                                                    ${submission.analysis.result.length>0 ? 
+                                                    submission.analysis.result.map(result => {`
+                                                            <strong>${result.title}</strong>
+                                                            <p>${result.content}</p>
+                                                            `}).join('') : 
+                                                            `<p>暫無分析結果 😵‍💫</p>`}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>`
+                            console.log(index, submission);
+                            tbody.append(newRow);
+                            tbody.append(`<tr><td colspan="8"></td><tr>`);
+                        });
+                    });
+                    $("#hangInProgress > .progress-bar")
+                        .attr("style", `width: ${handinNums/stuNum * 100}%`)
+                        .text(`${handinNums} / ${stuNum}`);
+                } else {
+                    let stuNum = 1;
+                    submissions.forEach((groupSubmission) => {
+                        groupSubmission.submissions.forEach((submission, index) => {
+                            stuNum++;
+                            let isHandIn = submission.isHandIn;
+                            if(isHandIn && index == 0){handinNums++;}
+                            let newRow = `<tr class="border rounded">
+                                <td>${index+1}</td>
+                                <td>${submission.studentId}</td>
+                                <td>${submission.studentName}</td>
+                                ${index==0?`
+                                    <td rowspan="${groupSubmission.length}">
+                                        <ul class="m-0">
+                                            ${submission.handInData.files ? submission.handInData.files.map(file => `
+                                                <li>    
+                                                    <a href="${file.path}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;"><img src="./images/file.svg" alt=""></a>
+                                                </li>
+                                            `).join('') : ''}
+                                            ${submission.handInData.links ? submission.handInData.links.map(link => `
+                                                <li>    
+                                                    <a href="${link.url}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;"><img src="./images/link.svg" alt=""></a>
+                                                </li>
+                                            `).join('') : ''}
+                                        </ul>
+                                    </td>`:``}
+                                ${index==0?`<td rowspan="${groupSubmission.length}">${submission.category.name}</td>`:``}
+                                ${index==0?`
+                                    <td rowspan="${groupSubmission.length}">
+                                        <textarea class="form-control" id="textarea_stuId" name="" rows="2">${isHandIn?'':'未繳交作業'}</textarea>
+                                    </td>`:``}
+                                <td style="width: 10%"><input class="form-control" type="text" name="" value="${isHandIn?"":0}"></td>
+                                ${index==0?`
+                                    <td rowspan="${groupSubmission.length}">
+                                        <td style="display: ${isAnalysis?'':'none'}"> 
+                                            <div class="accordion">
+                                                <div class="accordion-item"> 
+                                                    <h2 class="accordion-header"> 
+                                                        <button class="fw-bold accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseStuId${submission._id}" aria-expanded="false" aria-controls="collapseStuId">分析結果</button>
+                                                    </h2>
+                                                    <div class="accordion-collapse collapse" id="collapseStuId${submission._id}">
+                                                        <div class="accordion-body">
+                                                            ${submission.analysis.result.length>0 ? 
+                                                            submission.analysis.result.map(result => {`
+                                                                    <strong>${result.title}</strong>
+                                                                    <p>${result.content}</p>
+                                                                    `}).join('') : 
+                                                                    `<p>暫無分析結果 😵‍💫</p>`}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </td>`:``}
+                            </tr>`
+                            console.log(index, submission);
+                            tbody.append(newRow);
+                            tbody.append(`<tr><td colspan="8"></td><tr>`);
+                        });
+                    });
+                    $("#hangInProgress > .progress-bar")
+                        .attr("style", `width: ${handinNums/stuNum * 100}%`)
+                        .text(`${handinNums} / ${stuNum}`);
+                }
+            }
             
             // console.log(resData.submissions);
             // console.log(resData.submissions.length);
@@ -498,7 +620,7 @@ function showLessonData(lessonIndex) {
                 `}).join('') : ''}
                 <button type="button" class="btn btn-outline-dark">修改</button>
                 <button type="button" class="btn btn-outline-danger" onclick="removeHomework('${lesson._id}', '${hw._id}')">刪除</button>
-                <button type="button" class="btn btn-outline-primary" onclick="showCorrectHomeworkModal('${hw._id}', '${hw.name}', ${hw.isAnalysis})">批改</button>
+                <button type="button" class="btn btn-outline-primary" onclick="showCorrectHomeworkModal('${hw._id}', '${hw.name}', ${hw.isAnalysis}, ${hw.attribute}, ${hw.isHandInByIndividual})">批改</button>
                 <button type="button" class="btn btn-outline-success">AI 分析</button>
             </td>
         </tr>

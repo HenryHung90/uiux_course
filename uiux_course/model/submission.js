@@ -23,7 +23,7 @@ const submissionSchema = mongoose.Schema({
             }]
         },
         category: { // TODO: 需確認小組加入主題運作
-            id: String,
+            // id: String, //TO_CHECK Not sure
             name: String,
             catId: String,
         },
