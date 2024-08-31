@@ -27,7 +27,7 @@ router.post("/register", async function(req, res, next) {
     let isT = false;
     if(isTeacher) {
         // Teacher register code
-        if(tCode!="cjhuiux") {
+        if(tCode!=process.env.teacherRegisterCode) {
             console.log("tCode not correct");
             isT = false;
             return res.redirect("register"); // TODO: add error msg to client
