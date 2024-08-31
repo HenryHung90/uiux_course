@@ -13,7 +13,7 @@ $().ready(function () {
             $("#catInputContainer").removeClass("d-none");
             $("#catContainer").removeClass("d-none");
             $("#handInIndividualGroup").removeClass("d-none");
-        } else if($("#hwAttr").val() == "p") {
+        } else if ($("#hwAttr").val() == "p") {
             $("#handInIndividualGroup").addClass("d-none");
         }
     })
@@ -331,26 +331,26 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
     const correctingModalObject = new bootstrap.Modal("#correctingModal");
     let correctingModal = $("#correctingModal");
     //TODO Display loading
-    
+
     // hide / show analysis column
     $("#anaTh").attr("style", `display: ${isAnalysis ? '' : 'none'};`);
     // Fetch hand ins and calculate hand in status
-    $.post("/course/fetchHomework", {semester_id: currentSemester.id, hw_id, attribute})
+    $.post("/course/fetchHomework", { semester_id: currentSemester.id, hw_id, attribute })
         .done((data) => {
             let resData = JSON.parse(data);
             let submissions = resData.submissions;
             //TODO Hide loading
             // Replace modal data
-            $("#correctingModal .modal-title").text("批改作業-"+hw_name);
+            $("#correctingModal .modal-title").text("批改作業-" + hw_name);
             let tbody = $("#submissionTable > tbody");
             tbody.empty();
             let handinNums = 0;
-            if(attribute == 'p') {
+            if (attribute == 'p') {
                 submissions.forEach((submission, index) => {
                     let isHandIn = submission.isHandIn;
-                    if(isHandIn){handinNums++;}
+                    if (isHandIn) { handinNums++; }
                     let newRow = `<tr class="border rounded">
-                        <td>${index+1}</td>
+                        <td>${index + 1}</td>
                         <td>${submission.studentId}</td>
                         <td>${submission.studentName}</td>
                         <td> 
@@ -368,9 +368,9 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
                             </ul>
                         </td>
                         <td>${submission.category.name ? submission.category.name : ''}</td>
-                        <td><textarea class="form-control" id="textarea_stuId" name="" rows="2">${isHandIn?'':'未繳交作業'}</textarea></td>
-                        <td style="width: 10%"><input class="form-control" type="text" name="" value="${isHandIn?"":0}"></td>
-                        <td style="display: ${isAnalysis?'':'none'}"> 
+                        <td><textarea class="form-control" id="textarea_stuId" name="" rows="2">${isHandIn ? '' : '未繳交作業'}</textarea></td>
+                        <td style="width: 10%"><input class="form-control" type="text" name="" value="${isHandIn ? "" : 0}"></td>
+                        <td style="display: ${isAnalysis ? '' : 'none'}"> 
                             <div class="accordion">
                                 <div class="accordion-item"> 
                                     <h2 class="accordion-header"> 
@@ -378,12 +378,13 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
                                     </h2>
                                     <div class="accordion-collapse collapse" id="collapseStuId${submission._id}">
                                         <div class="accordion-body">
-                                            ${submission.analysis.result.length>0 ? 
-                                            submission.analysis.result.map(result => {`
+                                            ${submission.analysis.result.length > 0 ?
+                            submission.analysis.result.map(result => {
+                                `
                                                     <strong>${result.title}</strong>
                                                     <p>${result.content}</p>
-                                                    `}).join('') : 
-                                                    `<p>暫無分析結果 😵‍💫</p>`}
+                                                    `}).join('') :
+                            `<p>暫無分析結果 😵‍💫</p>`}
                                         </div>
                                     </div>
                                 </div>
@@ -394,16 +395,16 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
                     tbody.append(newRow);
                 });
                 $("#hangInProgress > .progress-bar")
-                    .attr("style", `width: ${handinNums/submissions.length * 100}%`)
+                    .attr("style", `width: ${handinNums / submissions.length * 100}%`)
                     .text(`${handinNums} / ${submissions.length}`);
             } else {
-                if(isHandInByIndividual) {
+                if (isHandInByIndividual) {
                     let stuNum = 1;
                     submissions.forEach((groupSubmission) => {
                         groupSubmission.submissions.forEach((submission, index) => {
                             stuNum++;
                             let isHandIn = submission.isHandIn;
-                            if(isHandIn){handinNums++;}
+                            if (isHandIn) { handinNums++; }
                             let newRow = `<tr class="border rounded">
                                 <td>${stuNum}</td>
                                 <td>${submission.studentId}</td>
@@ -422,10 +423,10 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
                                         `).join('') : ''}
                                     </ul>
                                 </td>
-                                ${index==0?`<td rowspan="${groupSubmission.length}">${submission.category.name}</td>`:``}
-                                <td><textarea class="form-control" id="textarea_stuId" name="" rows="2">${isHandIn?'':'未繳交作業'}</textarea></td>
-                                <td style="width: 10%"><input class="form-control" type="text" name="" value="${isHandIn?"":0}"></td>
-                                <td style="display: ${isAnalysis?'':'none'}"> 
+                                ${index == 0 ? `<td rowspan="${groupSubmission.length}">${submission.category.name}</td>` : ``}
+                                <td><textarea class="form-control" id="textarea_stuId" name="" rows="2">${isHandIn ? '' : '未繳交作業'}</textarea></td>
+                                <td style="width: 10%"><input class="form-control" type="text" name="" value="${isHandIn ? "" : 0}"></td>
+                                <td style="display: ${isAnalysis ? '' : 'none'}"> 
                                     <div class="accordion">
                                         <div class="accordion-item"> 
                                             <h2 class="accordion-header"> 
@@ -433,12 +434,13 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
                                             </h2>
                                             <div class="accordion-collapse collapse" id="collapseStuId${submission._id}">
                                                 <div class="accordion-body">
-                                                    ${submission.analysis.result.length>0 ? 
-                                                    submission.analysis.result.map(result => {`
+                                                    ${submission.analysis.result.length > 0 ?
+                                    submission.analysis.result.map(result => {
+                                        `
                                                             <strong>${result.title}</strong>
                                                             <p>${result.content}</p>
-                                                            `}).join('') : 
-                                                            `<p>暫無分析結果 😵‍💫</p>`}
+                                                            `}).join('') :
+                                    `<p>暫無分析結果 😵‍💫</p>`}
                                                 </div>
                                             </div>
                                         </div>
@@ -451,7 +453,7 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
                         });
                     });
                     $("#hangInProgress > .progress-bar")
-                        .attr("style", `width: ${handinNums/stuNum * 100}%`)
+                        .attr("style", `width: ${handinNums / stuNum * 100}%`)
                         .text(`${handinNums} / ${stuNum}`);
                 } else {
                     let stuNum = 1;
@@ -459,12 +461,12 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
                         groupSubmission.submissions.forEach((submission, index) => {
                             stuNum++;
                             let isHandIn = submission.isHandIn;
-                            if(isHandIn && index == 0){handinNums++;}
+                            if (isHandIn && index == 0) { handinNums++; }
                             let newRow = `<tr class="border rounded">
-                                <td>${index+1}</td>
+                                <td>${index + 1}</td>
                                 <td>${submission.studentId}</td>
                                 <td>${submission.studentName}</td>
-                                ${index==0?`
+                                ${index == 0 ? `
                                     <td rowspan="${groupSubmission.length}">
                                         <ul class="m-0">
                                             ${submission.handInData.files ? submission.handInData.files.map(file => `
@@ -478,16 +480,16 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
                                                 </li>
                                             `).join('') : ''}
                                         </ul>
-                                    </td>`:``}
-                                ${index==0?`<td rowspan="${groupSubmission.length}">${submission.category.name}</td>`:``}
-                                ${index==0?`
+                                    </td>`: ``}
+                                ${index == 0 ? `<td rowspan="${groupSubmission.length}">${submission.category.name}</td>` : ``}
+                                ${index == 0 ? `
                                     <td rowspan="${groupSubmission.length}">
-                                        <textarea class="form-control" id="textarea_stuId" name="" rows="2">${isHandIn?'':'未繳交作業'}</textarea>
-                                    </td>`:``}
-                                <td style="width: 10%"><input class="form-control" type="text" name="" value="${isHandIn?"":0}"></td>
-                                ${index==0?`
+                                        <textarea class="form-control" id="textarea_stuId" name="" rows="2">${isHandIn ? '' : '未繳交作業'}</textarea>
+                                    </td>`: ``}
+                                <td style="width: 10%"><input class="form-control" type="text" name="" value="${isHandIn ? "" : 0}"></td>
+                                ${index == 0 ? `
                                     <td rowspan="${groupSubmission.length}">
-                                        <td style="display: ${isAnalysis?'':'none'}"> 
+                                        <td style="display: ${isAnalysis ? '' : 'none'}"> 
                                             <div class="accordion">
                                                 <div class="accordion-item"> 
                                                     <h2 class="accordion-header"> 
@@ -495,18 +497,19 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
                                                     </h2>
                                                     <div class="accordion-collapse collapse" id="collapseStuId${submission._id}">
                                                         <div class="accordion-body">
-                                                            ${submission.analysis.result.length>0 ? 
-                                                            submission.analysis.result.map(result => {`
+                                                            ${submission.analysis.result.length > 0 ?
+                                        submission.analysis.result.map(result => {
+                                            `
                                                                     <strong>${result.title}</strong>
                                                                     <p>${result.content}</p>
-                                                                    `}).join('') : 
-                                                                    `<p>暫無分析結果 😵‍💫</p>`}
+                                                                    `}).join('') :
+                                        `<p>暫無分析結果 😵‍💫</p>`}
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </td>
-                                    </td>`:``}
+                                    </td>`: ``}
                             </tr>`
                             console.log(index, submission);
                             tbody.append(newRow);
@@ -514,21 +517,21 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
                         });
                     });
                     $("#hangInProgress > .progress-bar")
-                        .attr("style", `width: ${handinNums/stuNum * 100}%`)
+                        .attr("style", `width: ${handinNums / stuNum * 100}%`)
                         .text(`${handinNums} / ${stuNum}`);
                 }
             }
-            
+
             // console.log(resData.submissions);
             // console.log(resData.submissions.length);
             // TODO: res data display
             correctingModalObject.show();
-            
+
             console.log(data);
         })
         .fail((xhr, status, error) => {
             alert("更新繳交作業失敗");
-            console.log("更新繳交作業失敗： "+error);
+            console.log("更新繳交作業失敗： " + error);
         })
 }
 
@@ -606,21 +609,18 @@ function showLessonData(lessonIndex) {
                 </ul>
             </td>
             <td>${hw.attribute ? (hw.attribute == "p" ? '個人' : '團體') : ''}</td>
-            <td style="max-width: 100px">${hw.isRegular ? '例行作業' :
-            (hw.isCatCustom ? '學生自訂' + (hw.attribute == "p" ? '' : `<button class="btn btn-outline-primary d-block w-100">檢視分組</button>`) :
-                hw.categories ? hw.categories.map(cat => `
-                    <span class="btn btn-outline-dark mb-2">${cat.name}</span>
-                `).join('') + (hw.attribute == "p" ? '' : `<button class="btn btn-outline-primary d-block w-100">檢視分組</button>`) : '')}
+            <td>${hw.isRegular ? '例行作業' :
+            `<button class="bg-transparent border-0 p-0 text-decoration-underline" onclick="showGroupListModal('${lesson._id}', '${hw._id}')">${hw.isCatCustom ? '自訂主題' : '指定主題'}</button>`}
             </td>
             <td>
                 ${hw.uploaded ? hw.uploaded.map(up => {
-                    `
+                `
                     <button type="button" class="btn btn-danger">-</button>
                     <a href="${up.path}" target="_blank">${up.name}</a>
                 `}).join('') : ''}
                 <button type="button" class="btn btn-outline-dark">修改</button>
                 <button type="button" class="btn btn-outline-danger" onclick="removeHomework('${lesson._id}', '${hw._id}')">刪除</button>
-                <button type="button" class="btn btn-outline-primary" onclick="showCorrectHomeworkModal('${hw._id}', '${hw.name}', ${hw.isAnalysis}, ${hw.attribute}, ${hw.isHandInByIndividual})">批改</button>
+                <button type="button" class="btn btn-outline-primary" onclick="showCorrectHomeworkModal('${hw._id}', '${hw.name}', ${hw.isAnalysis}, '${hw.attribute}', ${hw.isHandInByIndividual})">批改</button>
                 <button type="button" class="btn btn-outline-success">AI 分析</button>
             </td>
         </tr>
@@ -649,6 +649,86 @@ function showLessonData(lessonIndex) {
         </ul>
     `;
     $("#pills-material").append(newMat);
+}
+function showGroupListModal(lesson_id, hw_id) {
+    // Req group list in the hw
+    $.post("/course/lesson/getGroupList", { lesson_id, hw_id })
+        .done((data) => {
+            // TODO 顯示主題其他情境 // 8/31 待釐清，目前初步想法：只要有主題的，不分個人還團體，都可以顯示加入，
+            //然後沒主題的本來就不能點，不會影響，所以暫不分情境，皆為可點、可分享的 card
+            data = JSON.parse(data);
+            $("#groupListModal .modal-title").text(`${data.title}`);
+            let row = $("#groupListModal .row").empty();
+            data.categories.forEach((category) => {
+                let newCat = `
+                    <div class="col-sm-4 col-6 mb-2">
+                        <div class="card">
+                            <div class="card-header d-flex">
+                                <h6 class="me-3 my-auto">${category.name}</h6>
+                                <button class="btn btn-outline-dark" type="button" onclick="shareGroupCode('${category._id}', '${category.name}')">加入代碼</button>
+                            </div>
+                            <div class="card-body"> 
+                                ${category.member.map(mem => `
+                                    <p class="card-title">${mem.studentID} ${mem.studentName}</p>
+                                    `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                row.append(newCat);
+            })
+
+        })
+        .fail((xhr, status, err) => {
+            alert("請求分組清單失敗，請洽管理員😣");
+            console.log(err);
+        })
+    new bootstrap.Modal("#groupListModal").show();
+}
+
+function shareGroupCode(gId, catName) {
+    let groupListModal = bootstrap.Modal.getInstance($("#groupListModal"));
+    let shareStuffModal = bootstrap.Modal.getInstance($("#shareStuffModal"));
+
+    $("#shareStuffModal .modal-body").empty();
+    $("#semesterCode").text(currentSemester.id);
+    let newModalBody = `
+    <div class="mb-3">
+    <label class="form-label light">主題代碼</label>
+    <h2>${gId}</h2>
+    </div>
+    `;
+    $("#shareStuffModal .modal-header h1").text(`加入 - ${catName}`);
+    $("#shareStuffModal .modal-header button")
+        .attr({
+            "data-bs-dismiss": "",
+            "aria-label": ""
+        })
+        .on("click", () => rtnGroupListModal());
+    $("#shareStuffModal .modal-body").append(newModalBody);
+
+    if (!groupListModal) {
+        groupListModal = new bootstrap.Modal(document.querySelector("#groupListModal"));
+    }
+    if (!shareStuffModal) {
+        shareStuffModal = new bootstrap.Modal(document.querySelector("#shareStuffModal"));
+    }
+    groupListModal.hide();
+    shareStuffModal.show();
+}
+
+function rtnGroupListModal() {
+    let groupListModal = bootstrap.Modal.getInstance($("#groupListModal"));
+    let shareStuffModal = bootstrap.Modal.getInstance($("#shareStuffModal"));
+
+    if (!groupListModal) {
+        groupListModal = new bootstrap.Modal(document.querySelector("#groupListModal"));
+    }
+    if (!shareStuffModal) {
+        shareStuffModal = new bootstrap.Modal(document.querySelector("#shareStuffModal"));
+    }
+    shareStuffModal.hide();
+    groupListModal.show();
 }
 
 function addSemester() {
@@ -689,8 +769,26 @@ function updateSemesterFields(semester) {
     fetchLessons();
 }
 
-function fetchSemesterCode() {
+function shareSemesterCode() {
+    $("#shareStuffModal .modal-header button")
+        .attr({
+            "data-bs-dismiss": 'modal',
+            "aria-label": 'Close'
+        })
+        .off("click");
+
+    $("#shareStuffModal .modal-body").empty();
     $("#semesterCode").text(currentSemester.id);
+    let newModalBody = `
+        <div class="mb-3">
+            <label class="form-label light">學期代碼</label>
+            <h2>${currentSemester.id}</h2>
+        </div>
+    `;
+    $("#shareStuffModal .modal-header h1").text('分享學期');
+    $("#shareStuffModal .modal-body").append(newModalBody);
+
+    new bootstrap.Modal("#shareStuffModal").show();
 }
 
 function deleteLesson(lesson) {

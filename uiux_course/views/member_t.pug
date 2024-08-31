@@ -1,7 +1,7 @@
 extends layout
-
 block content
   link(rel="stylesheet", href="/stylesheets/member_t.css")
+  <!--TODO check clear default code-->
   .container-fluid
     nav.navbar.navbar-expand-lg.bg-body-tertiary.mb-3
       .container-fluid
@@ -40,17 +40,7 @@ block content
               .modal-footer
                 button.btn.btn-secondary(type='button' data-bs-dismiss='modal') 取消
                 button.btn.btn-primary(type='button' onclick="addSemester()") 儲存
-        button.btn.btn-outline-dark(href="/auth/logout" style="width: 50%;" data-bs-toggle='modal' data-bs-target='#shareSemesterModal' onclick="fetchSemesterCode()")| 分享學期
-        #shareSemesterModal.modal.fade(tabindex='-1' aria-labelledby='shareSemesterModal' aria-hidden='true')
-          .modal-dialog
-            .modal-content
-              .modal-header
-                h1#exampleModalLabel.modal-title.fs-5 分享學期
-                button.btn-close(type='button' data-bs-dismiss='modal' aria-label='Close')
-              .modal-body
-                .mb-3
-                  label.form-label.light 學期代碼
-                  h2#semesterCode
+        button.btn.btn-outline-dark(href="/auth/logout" style="width: 50%;" onclick="shareSemesterCode()")| 分享學期
     div.row.justify-content-center.px-4
       div#lesson-list.col-sm-12.border.border-1.border-light-subtle.rounded-3.px-2.py-3
         div.row.w-100.m-0
@@ -184,7 +174,58 @@ block content
                       th(scope='col') 動作
                   tbody
               #pills-material.tab-pane.fade(role='tabpanel' aria-labelledby='pills-material-tab' tabindex='0') 
-    .modal.modal-xl#correctingModal(tabindex='-1')
+    #shareStuffModal.modal.fade(tabindex='-1' aria-labelledby='shareStuffModal' aria-hidden='true')
+          .modal-dialog
+            .modal-content
+              .modal-header
+                h1.modal-title.fs-5 
+                button.btn-close(type='button' data-bs-dismiss='modal' aria-label='Close')
+              .modal-body
+    .modal.fade#groupListModal(tabindex='-1')
+      .modal-dialog.modal-lg
+        .modal-content
+          .modal-header
+            h5.modal-title 作業名稱-自訂主題
+            button.btn-close(type='button' data-bs-dismiss='modal' aria-label='Close')
+          .modal-body
+            .d-flex.float-end.m-3
+              button.btn.btn-outline-dark(type="button") 匯出所有加入代碼
+            .container
+              .row.gx-2
+                .col-sm-4.col-6.mb-2
+                  .card
+                    .card-header.d-flex
+                      h6.me-3.my-auto 長照主題
+                      button.btn.btn-outline-dark(type="button" onclick="shareGroupCode()") 加入代碼
+                    .card-body 
+                      <p class="card-title">1092060 林俊廷</p>
+                      <p class="card-title">1092060 林俊廷</p>
+                      <p class="card-title">1092060 林俊廷</p>
+                      <p class="card-title">1092060 林俊廷</p>
+                      <p class="card-title">1092060 林俊廷</p>
+                .col-sm-4.col-6
+                  .card
+                    .card-header.d-flex
+                      h6.me-3.my-auto 長照主題
+                      button.btn.btn-outline-dark(type="button") 加入代碼
+                    .card-body 
+                      <p class="card-title">1092060 林俊廷</p>
+                      <p class="card-title">1092060 林俊廷</p>
+                      <p class="card-title">1092060 林俊廷</p>
+                      <p class="card-title">1092060 林俊廷</p>
+                      <p class="card-title">1092060 林俊廷</p>
+                .col-sm-4.col-6
+                  .card
+                    .card-header.d-flex
+                      h6.me-3.my-auto 長照主題
+                      button.btn.btn-outline-dark(type="button") 加入代碼
+                    .card-body 
+                      <p class="card-title">1092060 林俊廷</p>
+                      <p class="card-title">1092060 林俊廷</p>
+                      <p class="card-title">1092060 林俊廷</p>
+                      <p class="card-title">1092060 林俊廷</p>
+                      <p class="card-title">1092060 林俊廷</p>
+    .modal.fade.modal-xl#correctingModal(tabindex='-1') <!--TODO clear default code-->
       .modal-dialog
         .modal-content
           .modal-header
