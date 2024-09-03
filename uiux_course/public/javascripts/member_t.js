@@ -361,7 +361,7 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
                             <ul class="m-0">
                                 ${submission.handInData.files ? submission.handInData.files.map(file => `
                                     <li>    
-                                        <a href="${file.path}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;"><img src="./images/file.svg" alt=""></a>
+                                        <a href="/course/getHw/${hw_id}/${file._id}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;"><img src="./images/file.svg" alt=""></a>
                                     </li>
                                 `).join('') : ''}
                                 ${submission.handInData.links ? submission.handInData.links.map(link => `

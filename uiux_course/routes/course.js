@@ -554,7 +554,7 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
                 links: JSON.parse(links),
                 files: fileInfos
             },
-            category: { name: "Category Name", catId: "cat123" }, 
+            category: { name: "Category Name", catId: "cat123" }, // TODO 9/3 Start From here
             analysis: {
                 result: [{
                 }]
@@ -562,7 +562,7 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
         };
 
         const result = await submissionModel.updateOne(
-            { hwId: hwId, "submissions.studentId": stu._id }, // Query to find the specific student submission
+            { hwId: hwId, "submissions.studentId": stu.studentID }, // Query to find the specific student submission
             {
                 $set: {
                     "submissions.$.handInData": newSubmissionData.handInData // Update handInData if student submission exists
@@ -624,18 +624,29 @@ router.get('/:lessonId/:fileId', async (req, res) => {
         res.status(500).send('Error retrieving the file from the database.');
     }
 });
-router.get('/:lessonId/:hwId/:fileId', async (req, res) => {
+router.get('/getHw/:hwId/:fileId', async (req, res) => {
     try {
-        const { lessonId, hwId, fileId } = req.params;
-        const lesson = await Lesson.findById(lessonId);
-        if (!lesson) {
-            return res.status(404).send('Lesson not found');
+        const { hwId, fileId } = req.params;
+        const submission = await submissionModel.findOne({hwId: hwId});
+        if (!submission) {
+            return res.status(404).send('Submission not found');
         }
-        const file = lesson.hws.id(hwId).files.id(fileId);
-        if (!file) {
+        
+        let fileFound = null;
+
+        // Iterate through all the submissions to find the file by fileId
+        submission.submissions.forEach(studentSubmission => {
+            const file = studentSubmission.handInData.files.find(f => f._id.toString() === fileId);
+
+            if (file) {
+                fileFound = file;
+            }
+        });
+
+        if (!fileFound) {
             return res.status(404).send('File not found');
         }
-        res.sendFile(path.resolve(file.path));
+        res.sendFile(path.resolve(fileFound.path));
     } catch (error) {
         console.error(error);
         res.status(500).send('Error retrieving the file from the database.');
