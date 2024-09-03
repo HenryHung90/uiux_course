@@ -66,7 +66,18 @@ block content
                       th(scope='col') 屬性
                       th(scope='col') 主題
                       th(scope='col') 交作業
+                      th(scope='col') AI 分析
+                      th(scope='col') 評語
+                      th(scope='col') 分數
                   tbody
               #pills-material.tab-pane.fade(role='tabpanel' aria-labelledby='pills-material-tab' tabindex='0') 
+  #shareStuffModal.modal.fade(tabindex='-1' aria-labelledby='shareStuffModal' aria-hidden='true')
+        .modal-dialog
+          .modal-content
+            .modal-header
+              h1.modal-title.fs-5 
+              button.btn-close(type='button' data-bs-dismiss='modal' aria-label='Close')
+            .modal-body
+            .modal-footer
   script(src='/javascripts/member.js')
               

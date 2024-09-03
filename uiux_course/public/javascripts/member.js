@@ -1,6 +1,41 @@
 let currentSemester;
 let lessons;
 
+/**
+ * Common small modal
+ */
+const shareStuffModal = {
+    modal: $("#shareStuffModal"),
+    setData (mTitle="", mBody="", mFooter="") {
+        this.modal.find(".modal-title").text(mTitle);
+        this.modal.find(".modal-body").html(mBody);
+        this.modal.find(".modal-footer").html(mFooter);
+    },
+    show: () => {
+        let bsModal = bootstrap.Modal.getInstance($("#shareStuffModal"));
+        if(!bsModal){bsModal = new bootstrap.Modal($("#shareStuffModal"))}
+        bsModal.show();
+    },
+    customFunc: {},
+    resetCustomFunc() {
+        this.customFunc = {};
+    },
+    addCustomFunction(name, func) {
+        if (typeof func === "function") {
+            this.customFunc[name] = func;
+        } else {
+            console.error("Only functions can be added!");
+        }
+    },
+    callCustomFunction(name) {
+        if (this.customFunc[name]) {
+            this.customFunc[name]();
+        } else {
+            console.error(`Function with name '${name}' does not exist!`);
+        }
+    },
+}
+
 $().ready(function() {
     // Error indicate
     let queryParams = (new URL(location.href).searchParams);
@@ -16,7 +51,7 @@ $().ready(function() {
 
 function updateSemesters() {
     $.post("/course/fetchSemesters/stu")
-        .done((data) => {
+        .done(async (data) => {
             $("#semesters ul").empty();
             let semesters = JSON.parse(data);
             semesters.forEach(semester => {
@@ -24,6 +59,12 @@ function updateSemesters() {
                 $("#semesters ul").append(newSemester);
             });
             updateSemesterFields(semesters[0]);
+            await fetchLessons();
+            updateLessonBtnList();
+            // Click 1st lesson
+            if(lessons.length > 0) {
+                $(`#${lessons[0]._id}Btn`).click();
+            }
         })
         .fail((xhr, status, error) => {
             console.log("更新學期失敗： ", error);
@@ -33,49 +74,12 @@ function updateSemesters() {
 function updateSemesterFields(semester) {
     currentSemester = semester;
     $("#semester").text(currentSemester.name+" 學期");
-    fetchLessons();
 }
 
-function fetchLessons() {
-    $.post("/course/fetchLessons", {semester: currentSemester.name})
+async function fetchLessons() {
+    await $.post("/course/fetchLessons", {semester: currentSemester.name})
         .done((data) => {
             lessons = JSON.parse(data);
-            $("#lesson-name-list").empty();
-            for(let i = 0; i < lessons.length; i++) {
-                lesson = lessons[i];
-                let newLesson = 
-                    `<button class="btn w-100 text-start p-2 border-bottom border-1 border-light-subtitle lesson-list" type="button" id="${lesson._id}Btn" onclick="showLessonData('${i}')">${lesson.name}</button>`;
-                // `<tr>
-                //     <th scope="row">${i+1}</th>
-                //     <td id="${lesson._id}">${lesson.name}</td>
-                //     <td id="${lesson._id}">
-                //         <ul>
-                //             ${lesson.files.map(file => `
-                //                 <li>
-                //                     <a href="course/lessons/${lesson._id}/files/${file._id}" target="_blank">${file.name}</a>
-                //                 </li>
-                //             `).join('')}
-                //         </ul>
-                //     </td>
-                //     <td id="${lesson._id}">
-                //         <ul>
-                //             ${lesson.hws.map(hw => `
-                //                 <li>
-                //                     <p>${hw.description}</p>
-                //                 </li>
-                //             `).join('')}
-                //         </ul>
-                //     </td>
-                //     <td> 
-                //         <button class="btn btn-outline-secondary" id="btnUpdate${lesson._id}" type="button">編輯</button>
-                //         <button class="btn btn-outline-secondary" id="btnRemove${lesson._id}" type="button" onclick='deleteLesson(${JSON.stringify(lesson)})'>刪除</button>
-                //     </td>
-                // </tr>` 
-                // $("#lessons-table tbody").append(newLesson);
-                $("#lesson-name-list").append(newLesson);
-            }
-            // Click 1st lesson
-            $(`#${lessons[0]._id}Btn`).click();
         })
         .fail((xhr, status, error) => {
             alert("更新課程單元失敗");
@@ -83,7 +87,36 @@ function fetchLessons() {
         })
 }
 
-function showLessonData(lessonIndex) {
+function updateLessonBtnList() {
+    $("#lesson-name-list").empty();
+    for(let i = 0; i < lessons.length; i++) {
+        lesson = lessons[i];
+        let newLesson = 
+            `<button class="btn w-100 text-start p-2 border-bottom border-1 border-light-subtitle lesson-list" type="button" id="${lesson._id}Btn" onclick="showLessonData('${i}')">${lesson.name}</button>`;
+        $("#lesson-name-list").append(newLesson);
+    }
+}
+
+async function fetchPersonalSubmission() {
+    let submission = [];
+
+    await $.post("course/lesson/getPersonalSubmissions")
+        .done((data) => {
+            console.log(data);
+            //TODO toUpdate
+            submission = data;
+            return submission;
+        })
+        .fail((xhr, status, error) => {
+            alert("取得繳交作業失敗");
+            console.log("取得繳交作業失敗：", error);
+        })
+}
+
+async function showLessonData(lessonIndex) {
+    await fetchLessons();
+    let submissions = await fetchPersonalSubmission();
+
     let lesson = lessons[lessonIndex];
     $(".lesson-list-chosen").removeClass("lesson-list-chosen");
     $(`#${lesson._id}Btn`).addClass("lesson-list-chosen");
@@ -119,20 +152,102 @@ function showLessonData(lessonIndex) {
             <td>${hw.src?hw.src.map(src => {`
                 <a href="${src.path}" target="_blank">${src.name}</a>
             `}).join(''):''}</td>
-            <td>${hw.attribute ? (hw.attribute=="i" ? 個人 : 團體) : ''}</td>
-            <td>${hw.category ? 
-                (hw.category=="c" ? 
-                    `<button type="button" class="btn btn-outline-dark">自訂</button>` 
-                    : `<button type="button" class="btn btn-outline-dark">加入</button>`) 
-                : ''}</td>
+            <td>${hw.attribute=="g" ? "團體" : "個人"}</td>
+            <td>${hw.isRegular ? "例行作業" :
+                    hw.isCatCustom ? 
+                        hw.attribute=="p" ? `<button type="button" class="btn btn-outline-dark">自訂</button>`
+                        : `<div class="btn-group">
+                                <button type="button" class="btn btn-outline-dark">加入</button>
+                                <button type="button" class="btn btn-outline-dark">新增</button>
+                            </div>`
+                     : `<button type="button" class="btn btn-outline-dark">加入</button>`
+                }
+            </td>
             <td>
                 ${hw.uploaded?hw.uploaded.map(up => {`
-                    <button type="button" class="btn btn-danger">-</button>
+                    <button type="button" class="btn btn-danger">-</button> 
                     <a href="${up.path}" target="_blank">${up.name}</a>
                 `}).join(''):''}
-                <button type="button" class="btn btn-outline-dark">+</button>
+                <button type="button" class="btn btn-outline-dark" onclick="showHandInHwModal('${hw.name}', '${hw._id}')">+</button>
             </td>
+            <td>TODO 分析</td>
+            <td>TODO comment</td>
+            <td>TODO grade</td>
         </tr>
     `).join('')}`;
     $("#homework-table tbody").append(newHome);
 }
+
+function showHandInHwModal(hwName="", hw_id="") {
+    let modalBody = `
+        <div class="mb-3" id="hwAddLink">
+            <div class="form-label">
+                <span class="me-3">上傳連結</span>
+                <button class="btn btn-outline-dark" type="button" onclick="newMetLink('#hwAddLink')">加連結</button>
+            </div>
+            <label class="form-label" for="hw-files-add">上傳檔案（可按 shift 多選）</label>
+            <input class="form-control mb-3" id="hw-files-add" type="file" multiple="">
+        </div>
+    `;
+    let modalFooter = `
+        <button type="button" id="submitHwBtn" class="btn btn-primary">繳交</button>
+    `;
+    shareStuffModal.resetCustomFunc();
+    // Set submit func
+    shareStuffModal.addCustomFunction("submitHomework", function () {
+        let formData = new FormData();
+        formData.append("semester", currentSemester.name);
+        formData.append("name", $(".lesson-list-chosen").text());
+        formData.append("hwId", hw_id);
+
+        let links = [];
+        $("input[name='l-link-add']").each(function () { //TODO: 存完要刪除所有同 name input
+            if ($(this).val()) {
+                links.push({ url: $(this).val() });
+            }
+        });
+        formData.append("links", JSON.stringify(links));
+
+        let files = $("#hw-files-add")[0].files;
+        for (let i = 0; i < files.length; i++) {
+            formData.append("files", files[i]);
+        }
+
+        $.ajax({
+            url: "/course/lesson/submitHomework",
+            type: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function (res) {
+                alert("提交成功！🤟🏻");
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                alert("提交失敗，請再試一次！💩");
+            }
+        })
+    });
+    shareStuffModal.setData(`繳交作業-${hwName}`, modalBody, modalFooter);
+    $("#submitHwBtn").on("click", () => {shareStuffModal.callCustomFunction("submitHomework");});
+    shareStuffModal.show();
+}
+
+// TODO to restructure into an Object------- start
+function newMetLink(container) {
+    let cTime = Date.now();
+    let newLink = `
+        <div class="d-flex mb-3" id="${cTime}">
+            <button class="btn btn-danger me-2" type="button" onclick="removeMetLink(${cTime})">-</button>
+            <input class="form-control" type="text" name="l-link-add" placeholder="請輸入連結">
+        </div>
+    `;
+    $(container).append(newLink);
+}
+
+function removeMetLink(cTime) {
+    let isDelete = confirm("確定要刪除教材連結？\n刪除後無法復原");
+    if (isDelete) {
+        $(`#${cTime}`).remove();
+    }
+}
+// TODO to restructure----- end

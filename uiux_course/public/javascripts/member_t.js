@@ -130,6 +130,8 @@ function rmCat(ele) {
 
 function addMat() {
     let formData = new FormData();
+    formData.append("semester", currentSemester.name);
+    formData.append("name", $(".lesson-list-chosen").text());
     let l_files = $("#l-files-add")[0].files;
     let l_links = [];
     let l_id = $(".lesson-list-chosen")[0].id;
@@ -231,6 +233,8 @@ function removeMetLink(cTime) {
 
 function addHomework() {
     let formData = new FormData();
+    formData.append("semester", currentSemester.name);
+    formData.append("name", $(".lesson-list-chosen").text());
     let files = $("#hw-files-add")[0].files;
     let links = [];
     let categories = [];
@@ -247,8 +251,8 @@ function addHomework() {
     if (!$("#hwName").val()) {
         alert("請輸入作業名稱！");
     } else {
-        // name
-        formData.append("name", $("#hwName").val());
+        // hwName
+        formData.append("hwName", $("#hwName").val());
 
         // description
         formData.append("description", $("#hwDes").val());
@@ -289,11 +293,11 @@ function addHomework() {
             contentType: false,
             success: function (res) {
                 alert("新增成功");
-                showLessonData();
+                showLessonData($(".lesson-list").index(".lesson-list-chosen"));
             },
             error: function (jqXHR/* XMLHttpRequest */, textStatus, errorThrown) {
                 alert("新增失敗");
-                showLessonData();
+                showLessonData($(".lesson-list").index(".lesson-list-chosen"));
             }
         })
     }
@@ -598,7 +602,7 @@ function showLessonData(lessonIndex) {
                 <ul class="m-0">
                     ${hw.files ? hw.files.map(file => `
                         <li>    
-                            <a href="${file.path}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;">${file.name}</a>
+                            <a href="course/${lesson._id}/${hw._id}/${file._id}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;">${file.name}</a>
                         </li>
                     `).join('') : ''}
                     ${hw.links ? hw.links.map(link => `
@@ -635,7 +639,7 @@ function showLessonData(lessonIndex) {
             ${lesson.files.map(file => `
                 <li>
                     <button class="btn btn-outline-danger m-1" onclick="deleteMat('${lesson._id}', '${file._id}', true)">-</button>
-                    <a href="course/lessons/${lesson._id}/files/${file._id}" target="_blank">${file.name}</a>
+                    <a href="course/${lesson._id}/${file._id}" target="_blank">${file.name}</a>
                 </li>
             `).join('')}
         </ul>
@@ -698,7 +702,7 @@ function shareGroupCode(gId, catName) {
     <h2>${gId}</h2>
     </div>
     `;
-    $("#shareStuffModal .modal-header h1").text(`加入 - ${catName}`);
+    $("#shareStuffModal .modal-title").text(`加入 - ${catName}`);
     $("#shareStuffModal .modal-header button")
         .attr({
             "data-bs-dismiss": "",
@@ -708,10 +712,10 @@ function shareGroupCode(gId, catName) {
     $("#shareStuffModal .modal-body").append(newModalBody);
 
     if (!groupListModal) {
-        groupListModal = new bootstrap.Modal(document.querySelector("#groupListModal"));
+        groupListModal = new bootstrap.Modal($("#groupListModal"));
     }
     if (!shareStuffModal) {
-        shareStuffModal = new bootstrap.Modal(document.querySelector("#shareStuffModal"));
+        shareStuffModal = new bootstrap.Modal($("#shareStuffModal"));
     }
     groupListModal.hide();
     shareStuffModal.show();

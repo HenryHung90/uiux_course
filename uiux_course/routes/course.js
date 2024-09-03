@@ -234,19 +234,19 @@ router.post("/deleteMat", isAuth, isTeacher, async function (req, res, next) {
 })
 
 router.post("/addHw", isAuth, isTeacher, upload.any('files'), async function (req, res, next) {
-    const files = req.files;
-    let fileInfos = [];
-    const {
-        id,
-        name,
-        description,
-        links,
-        attribute,
-        isRegular,
-        isCatCustom,
-        categories
-    } = req.body;
     try {
+        const files = req.files;
+        let fileInfos = [];
+        const {
+            id,
+            hwName,
+            description,
+            links,
+            attribute,
+            isRegular,
+            isCatCustom,
+            categories
+        } = req.body;
         // files
         if (files && files.length > 0) {
             const filePromises = files.map((file) => {
@@ -274,7 +274,7 @@ router.post("/addHw", isAuth, isTeacher, upload.any('files'), async function (re
         await Lesson.updateOne({ _id: id }, {
             $push: {
                 hws: {
-                    name,
+                    name: hwName,
                     description,
                     files: fileInfos,
                     links: links ? JSON.parse(links) : {},
@@ -322,7 +322,7 @@ router.post("/rmHw", isAuth, isTeacher, async function (req, res, next) {
             try {
                 await Promise.all(hw.files.map(async (file) => {
                     if (fs.existsSync(file.path)) {
-                        await fsPromises.rm(lessonDir, { recursive: true });
+                        await fsPromises.rm(file.path, { recursive: true });
                     }
                 }))
             } catch (error) {
@@ -516,8 +516,98 @@ router.get('/join/', isAuth, async function (req, res, next) {
     }
 });
 
+router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, res, next) => {
+    try {
+        let stu = await memberModel.findOne({ email: req.session.email });
+        const files = req.files;
+        let fileInfos = [];
+        const { hwId, links } = req.body;
+        // files
+        if (files && files.length > 0) {
+            const filePromises = files.map((file) => {
+                const { path, originalname, mimetype } = file;
+
+                return new Promise(async (resolve, reject) => {
+                    fs.readFile(path, (err, data) => {
+                        if (err) {
+                            return reject(err);
+                        }
+
+                        const fileInfo = {
+                            name: originalname,
+                            path: path,
+                            contentType: mimetype
+                        }
+
+                        resolve(fileInfo);
+                    })
+                })
+            })
+            fileInfos = await Promise.all(filePromises);
+        }
+
+        let newSubmissionData = {
+            studentId: stu.studentID,
+            isHandIn: true,
+            studentName: stu.name,
+            handInData: {
+                links: JSON.parse(links),
+                files: fileInfos
+            },
+            category: { name: "Category Name", catId: "cat123" }, 
+            analysis: {
+                result: [{
+                }]
+            }
+        };
+
+        const result = await submissionModel.updateOne(
+            { hwId: hwId, "submissions.studentId": stu._id }, // Query to find the specific student submission
+            {
+                $set: {
+                    "submissions.$.handInData": newSubmissionData.handInData // Update handInData if student submission exists
+                }
+            },
+            { upsert: false } // Do not create a new document for this operation
+        );
+
+        if (result.modifiedCount === 0) {
+            // If no document was updated (i.e., no existing submission for this student), push a new one
+            await submissionModel.updateOne(
+                { hwId: hwId },
+                {
+                    $push: {
+                        submissions: newSubmissionData // Add the new submission data
+                    }
+                },
+                { upsert: false } // Ensure the document exists, but don't create a new one
+            );
+        }
+        res.send(200);
+    } catch (error) {
+        console.log("Homework submit error: ", error);
+        res.sendStatus(500);
+    }
+});
+
+router.post("/lesson/getPersonalSubmissions", isAuth, async (req, res, next) => {
+    try {
+        let student = await memberModel.find({email: req.session.email});
+        let submissions = await submissionModel.find({
+            submissions: {
+                $elemMatch: {studentId: student.studentID}
+            }
+        });
+        res.send(JSON.stringify(submissions)); //TODO need check
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error getting the personal submission.');
+    }
+});
+
+//==== Common
 // Route to display an individual file based on its ID
-router.get('/lessons/:lessonId/files/:fileId', async (req, res) => {
+router.get('/:lessonId/:fileId', async (req, res) => {
     try {
         const { lessonId, fileId } = req.params;
         const lesson = await Lesson.findById(lessonId);
@@ -525,6 +615,23 @@ router.get('/lessons/:lessonId/files/:fileId', async (req, res) => {
             return res.status(404).send('Lesson not found');
         }
         const file = lesson.files.id(fileId);
+        if (!file) {
+            return res.status(404).send('File not found');
+        }
+        res.sendFile(path.resolve(file.path));
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error retrieving the file from the database.');
+    }
+});
+router.get('/:lessonId/:hwId/:fileId', async (req, res) => {
+    try {
+        const { lessonId, hwId, fileId } = req.params;
+        const lesson = await Lesson.findById(lessonId);
+        if (!lesson) {
+            return res.status(404).send('Lesson not found');
+        }
+        const file = lesson.hws.id(hwId).files.id(fileId);
         if (!file) {
             return res.status(404).send('File not found');
         }
