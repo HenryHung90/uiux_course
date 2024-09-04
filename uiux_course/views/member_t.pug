@@ -310,6 +310,6 @@ block content
                     td AI 分析
 
           .modal-footer
-            button.btn.btn-primary(type='button') 送出
-            button.btn.btn-secondary(type='button' data-bs-dismiss='modal') 暫存
+            button.btn.btn-secondary(type='button' onclick="submitGrade(0)") 暫存
+            button.btn.btn-primary(type='button' onclick="submitGrade(1)") 送出
   script(src='/javascripts/member_t.js')

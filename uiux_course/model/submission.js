@@ -5,6 +5,7 @@ const submissionSchema = mongoose.Schema({
         type: String,
         required: true
     },
+    submitStatus: Number,
     submissions: [{
         isHandIn: Boolean,
         studentId: {

@@ -428,6 +428,41 @@ router.post('/fetchHomework', isAuth, isTeacher, async function (req, res, next)
     }
 });
 
+router.post("/lesson/submitGrade", isAuth, isTeacher, async (req, res, next) => {
+    const {hwId, keepStatus, data} = req.body;
+    let dataObj = JSON.parse(data);
+    console.log(hwId, keepStatus, typeof dataObj);
+    try {
+        // Update the submitStatus first
+        await submissionModel.updateOne({hwId}, {
+            $set: {
+                submitStatus: keepStatus
+            }
+        });
+
+        // Prepare bulk updates for submissions
+        const bulkOps = dataObj.map(submission => ({
+            updateOne: {
+                filter: { hwId, "submissions.studentId": submission.studentId },
+                update: {
+                    $set: {
+                        "submissions.$.feedback": submission.feedback,
+                        "submissions.$.score": submission.score
+                    }
+                }
+            }
+        }));
+
+        // Execute all bulk operations at once
+        await submissionModel.bulkWrite(bulkOps);
+
+        res.sendStatus(200);
+    } catch (error) {
+        console.log("submitGrade error: ", error);
+        res.sendStatus(500);
+    }
+});
+
 router.post('/lesson/getGroupList', isAuth, isTeacher, async (req, res, next) => {
     try {
         const { lesson_id, hw_id } = req.body;
@@ -565,6 +600,7 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
             { hwId: hwId, "submissions.studentId": stu.studentID }, // Query to find the specific student submission
             {
                 $set: {
+                    "submissions.$.isHandIn": newSubmissionData.isHandIn,
                     "submissions.$.handInData": newSubmissionData.handInData // Update handInData if student submission exists
                 }
             },

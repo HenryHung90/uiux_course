@@ -343,6 +343,7 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
         .done((data) => {
             let resData = JSON.parse(data);
             let submissions = resData.submissions;
+            $("#submissionTable").attr("hwId", hw_id);
             //TODO Hide loading
             // Replace modal data
             $("#correctingModal .modal-title").text("批改作業-" + hw_name);
@@ -372,8 +373,8 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
                             </ul>
                         </td>
                         <td>${submission.category.name ? submission.category.name : ''}</td>
-                        <td><textarea class="form-control" id="textarea_stuId" name="" rows="2">${isHandIn ? '' : '未繳交作業'}</textarea></td>
-                        <td style="width: 10%"><input class="form-control" type="text" name="" value="${isHandIn ? "" : 0}"></td>
+                        <td><textarea class="form-control" id="textarea_stuId" name="" rows="2">${isHandIn ? submission.feedback : '未繳交作業'}</textarea></td>
+                        <td style="width: 10%"><input class="form-control" type="text" name="" value="${isHandIn ? submission.score : 0}"></td>
                         <td style="display: ${isAnalysis ? '' : 'none'}"> 
                             <div class="accordion">
                                 <div class="accordion-item"> 
@@ -536,6 +537,42 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
         .fail((xhr, status, error) => {
             alert("更新繳交作業失敗");
             console.log("更新繳交作業失敗： " + error);
+        })
+}
+
+/**
+ * 
+ * @param {*} status 0=keep grade, 1=submit grade
+ */
+function submitGrade(status=0) {
+    if(status==1) {
+        if(!confirm("確認送出？\n送出後不能再修改，且學生會看到成績與評語！")){
+            return;
+        }
+    }
+    let submissionTable = $("#submissionTable");
+    let submissions = submissionTable.find("tbody tr");
+    let data = [];
+
+    submissions.each(function() {
+        let row = $(this);
+        data.push({
+            studentId: row.find('td:eq(1)').text().trim(),
+            feedback: row.find('td:eq(5) textarea').val(),
+            score: row.find('td:eq(6) input').val()
+        });
+    });
+    $.post("/course/lesson/submitGrade", {
+        hwId: submissionTable.attr("hwId"),
+        keepStatus: status,
+        data: JSON.stringify(data)
+    })
+        .done((data) => {
+            alert(`成績${status==0?'暫存成功！':'送出成功！'}`);
+        })
+        .fail((xhr, status, error) => {
+            alert("儲存失敗！");
+            console.log("儲存失敗： ", error);
         })
 }
 
