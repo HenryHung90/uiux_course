@@ -629,12 +629,18 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
 router.post("/lesson/getPersonalSubmissions", isAuth, async (req, res, next) => {
     try {
         let student = await memberModel.find({email: req.session.email});
+        student = student[0];
         let submissions = await submissionModel.find({
-            submissions: {
-                $elemMatch: {studentId: student.studentID}
-            }
+            "submissions.studentId": student.studentID
         });
-        res.send(JSON.stringify(submissions)); //TODO need check
+        const personalSubmissions = submissions.map(doc => {
+            return {
+                ...doc.toObject(),
+                // TODO 將 score 根據送出狀態回傳
+                submissions: doc.submissions.filter(sub => sub.studentId === student.studentID)
+            };
+        });
+        res.send(JSON.stringify(personalSubmissions)); 
     } catch (error) {
         console.error(error);
         res.status(500).send('Error getting the personal submission.');

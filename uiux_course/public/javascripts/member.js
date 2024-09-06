@@ -98,26 +98,44 @@ function updateLessonBtnList() {
 }
 
 async function fetchPersonalSubmission() {
-    let submission = [];
-
-    await $.post("course/lesson/getPersonalSubmissions")
-        .done((data) => {
-            console.log(data);
-            //TODO toUpdate
-            submission = data;
-            return submission;
-        })
-        .fail((xhr, status, error) => {
-            alert("取得繳交作業失敗");
-            console.log("取得繳交作業失敗：", error);
-        })
+    try {
+        let data = await $.post("course/lesson/getPersonalSubmissions");
+        let rtnList = JSON.parse(data);
+        return rtnList;
+    } catch (error) {
+        alert("取得繳交作業失敗");
+        console.error("取得繳交作業失敗：", error);
+        return []; // return an empty array if there's an error
+    }
 }
 
 async function showLessonData(lessonIndex) {
     await fetchLessons();
     let submissions = await fetchPersonalSubmission();
-
     let lesson = lessons[lessonIndex];
+    console.log("before: ", submissions);
+    for(let i = 0; i < lesson.hws.length; i++) {
+        lessonSub = submissions.find((ele) => 
+            ele.hwId.toString() == lesson.hws[i]._id.toString());
+        lesson.hws[i].submission = lessonSub || {
+            isHandIn: '',
+            studentId: '',
+            studentName: '',
+            handInData: {
+                links: [{}],
+                files: [{}]
+            },
+            category: { 
+                name: '',
+                catId: '',
+            },
+            feedback: '',
+            score: '',
+            analysis: {
+                result: [{}]
+            }
+        };
+    }
     $(".lesson-list-chosen").removeClass("lesson-list-chosen");
     $(`#${lesson._id}Btn`).addClass("lesson-list-chosen");
 
@@ -171,8 +189,8 @@ async function showLessonData(lessonIndex) {
                 <button type="button" class="btn btn-outline-dark" onclick="showHandInHwModal('${hw.name}', '${hw._id}')">+</button>
             </td>
             <td>TODO 分析</td>
-            <td>TODO comment</td>
-            <td>TODO grade</td>
+            <td>${hw.submission.submitStatus==1?hw.submission.submissions[0].feedback/** TODO course 改：將 score 根據送出狀態回傳 */:``}</td>
+            <td>${hw.submission.submitStatus==1?hw.submission.submissions[0].score:``}</td>
         </tr>
     `).join('')}`;
     $("#homework-table tbody").append(newHome);
