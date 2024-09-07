@@ -244,6 +244,7 @@ router.post("/addHw", isAuth, isTeacher, upload.any('files'), async function (re
             links,
             attribute,
             isRegular,
+            isAnalysis,
             isCatCustom,
             categories
         } = req.body;
@@ -281,7 +282,8 @@ router.post("/addHw", isAuth, isTeacher, upload.any('files'), async function (re
                     attribute,
                     isRegular,
                     isCatCustom,
-                    categories: categories ? JSON.parse(categories) : {}
+                    categories: categories ? JSON.parse(categories) : {},
+                    isAnalysis
                 }
             }
         })

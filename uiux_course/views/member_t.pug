@@ -119,6 +119,17 @@ block content
                           select#hwAttr.form-select(name="hwAttr" ) 
                             option(value="p") 個人 
                             option(value="g") 團體
+                        .mb-3
+                          div.form-check.form-switch
+                              label.form-check-label.me-4(for="isAnalysis") 
+                                span AI 分析
+                                span 
+                                  img(src="./images/question-mark.svg" style="width: 15px;"
+                                    data-bs-toggle="tooltip" data-bs-placement="top"
+                                    data-bs-custom-class="custom-tooltip"
+                                    data-bs-title="選擇後，學生上傳作業時，才會進行 AI 分析"
+                                  )
+                              input#isAnalysis.form-check-input(type="checkbox", name="isAnalysis" role="switch")    
                         .mb-3 
                           div.form-label.d-flex
                             label.me-4(for="hwAttr") 主題

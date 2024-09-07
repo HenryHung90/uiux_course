@@ -272,6 +272,10 @@ function addHomework() {
 
         // attribute
         formData.append("attribute", $("#hwAttr").val());
+        
+        // isAnalysis
+        formData.append("isAnalysis", $("#isAnalysis").prop("checked") ? true : false);
+
         // isRegular
         formData.append("isRegular", $("#isCatReg").prop("checked") ? true : false);
 
