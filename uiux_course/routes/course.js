@@ -593,8 +593,7 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
             },
             category: { name: "Category Name", catId: "cat123" }, // TODO 9/3 Start From here
             analysis: {
-                result: [{
-                }]
+                result: []
             }
         };
 
@@ -602,15 +601,18 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
             { hwId: hwId, "submissions.studentId": stu.studentID }, // Query to find the specific student submission
             {
                 $set: {
+                    // Update data if student submission exists
                     "submissions.$.isHandIn": newSubmissionData.isHandIn,
-                    "submissions.$.handInData": newSubmissionData.handInData // Update handInData if student submission exists
+                    "submissions.$.handInData": newSubmissionData.handInData, 
+                    "submissions.$.category": newSubmissionData.category, 
+                    "submissions.$.analysis": newSubmissionData.analysis, 
                 }
             },
             { upsert: false } // Do not create a new document for this operation
         );
 
+        // If no document was updated (i.e., no existing submission for this student), push a new one
         if (result.modifiedCount === 0) {
-            // If no document was updated (i.e., no existing submission for this student), push a new one
             await submissionModel.updateOne(
                 { hwId: hwId },
                 {

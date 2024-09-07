@@ -117,7 +117,7 @@ async function showLessonData(lessonIndex) {
     for(let i = 0; i < lesson.hws.length; i++) {
         lessonSub = submissions.find((ele) => 
             ele.hwId.toString() == lesson.hws[i]._id.toString());
-        lesson.hws[i].submission = lessonSub || {
+        lesson.hws[i].submission = lessonSub || {submissions: [{
             isHandIn: '',
             studentId: '',
             studentName: '',
@@ -132,9 +132,9 @@ async function showLessonData(lessonIndex) {
             feedback: '',
             score: '',
             analysis: {
-                result: [{}]
+                result: []
             }
-        };
+        }]};
     }
     $(".lesson-list-chosen").removeClass("lesson-list-chosen");
     $(`#${lesson._id}Btn`).addClass("lesson-list-chosen");
@@ -182,13 +182,46 @@ async function showLessonData(lessonIndex) {
                 }
             </td>
             <td>
-                ${hw.uploaded?hw.uploaded.map(up => {`
-                    <button type="button" class="btn btn-danger">-</button> 
-                    <a href="${up.path}" target="_blank">${up.name}</a>
-                `}).join(''):''}
+                <ul class="my-1 p-0" style="list-style: none;">
+                    ${hw.submission.submissions[0].handInData.files ? 
+                    hw.submission.submissions[0].handInData.files.map(file => `
+                        <li class="d-flex align-items-center">    
+                            <button type="button" class="btn btn-danger me-1">-</button> 
+                            <a href="/course/getHw/${hw._id}/${file._id}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;"><img src="./images/file.svg" alt=""></a>
+                        </li>
+                    `).join('') : ''}
+                    ${hw.submission.submissions[0].handInData.links ? 
+                    hw.submission.submissions[0].handInData.links.map(link => `
+                        <li>    
+                            <button type="button" class="btn btn-danger">-</button> 
+                            <a href="${link.url}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;"><img src="./images/link.svg" alt=""></a>
+                        </li>
+                    `).join('') : ''}
+                </ul>
                 <button type="button" class="btn btn-outline-dark" onclick="showHandInHwModal('${hw.name}', '${hw._id}')">+</button>
             </td>
-            <td>TODO 分析</td>
+            <td> 
+                ${hw.isAnalysis ? `
+                    <div class="accordion">
+                        <div class="accordion-item"> 
+                            <h2 class="accordion-header"> 
+                                <button class="fw-bold accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseStuId${hw.submission._id}" aria-expanded="false" aria-controls="collapseStuId">分析結果</button>
+                            </h2>
+                            <div class="accordion-collapse collapse" id="collapseStuId${hw.submission._id}">
+                                <div class="accordion-body">
+                                    ${hw.submission.submissions[0].analysis.result.length > 0 ?
+                                        hw.submission.submissions[0].analysis.result.map(result => {`
+                                            <strong>${result.title}</strong>
+                                            <p>${result.content}</p>
+                                            `}).join('') :
+                                            `<p>暫無分析結果 😵‍💫</p>`
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>` :
+                    "此作業無 AI 分析"}
+            </td>
             <td>${hw.submission.submitStatus==1?hw.submission.submissions[0].feedback/** TODO course 改：將 score 根據送出狀態回傳 */:``}</td>
             <td>${hw.submission.submitStatus==1?hw.submission.submissions[0].score:``}</td>
         </tr>
