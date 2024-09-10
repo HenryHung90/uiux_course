@@ -798,7 +798,7 @@ function updateSemesters() {
             $("#semesters ul").empty();
             let semesters = JSON.parse(data);
             semesters.forEach(semester => {
-                let newSemester = ` <li><a class="dropdown-item" href="#" id="${semester.id}" onclick="updateSemesterFields({name: ${semester.name}, id: ${semester.id}})">${semester.name}</a></li>`;
+                let newSemester = ` <li><a class="dropdown-item" href="#" id="${semester.id}" onclick="updateSemesterFields({name: '${semester.name}', id: '${semester.id}'})">${semester.name}</a></li>`;
                 $("#semesters ul").append(newSemester);
             });
             updateSemesterFields(semesters[0]);
