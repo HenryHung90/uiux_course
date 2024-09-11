@@ -210,12 +210,14 @@ async function showLessonData(lessonIndex) {
                             <div class="accordion-collapse collapse" id="collapseStuId${hw.submission._id}">
                                 <div class="accordion-body">
                                     ${hw.submission.submissions[0].analysis.result.length > 0 ?
-                                        hw.submission.submissions[0].analysis.result.map(result => {`
+                                        hw.submission.submissions[0].analysis.result.map(result => `
                                             <strong>${result.title}</strong>
-                                            <p>${result.content}</p>
-                                            `}).join('') :
+                                            <p>${result.content.map(content => 
+                                                `#${content}`).join(' ')}</p>
+                                            `).join('') :
                                             `<p>暫無分析結果 😵‍💫</p>`
                                     }
+                                    <button type="button" class="btn btn-outline-dark" onclick="analyzeHw('${hw._id}', '${hw.submission.submissions[0]._id}')">（重新）分析</button>
                                 </div>
                             </div>
                         </div>
@@ -281,6 +283,17 @@ function showHandInHwModal(hwName="", hw_id="") {
     shareStuffModal.setData(`繳交作業-${hwName}`, modalBody, modalFooter);
     $("#submitHwBtn").on("click", () => {shareStuffModal.callCustomFunction("submitHomework");});
     shareStuffModal.show();
+}
+
+function analyzeHw(hwId, submissionId) {
+    $.post("/course/aiAnalyze", {anaType: "keyWords", hwId, submissionId})
+        .done((data) => {
+            console.log(data);
+        })
+        .fail((xhr, status, error) => {
+            alert("AI 分析失敗");
+            console.log("AI 分析失敗", error);
+        })
 }
 
 // TODO to restructure into an Object------- start

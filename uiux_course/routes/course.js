@@ -8,6 +8,51 @@ const Lesson = require("../model/lesson");
 const Semester = require("../model/semester");
 const memberModel = require('../model/member');
 const submissionModel = require("../model/submission");
+const sharp = require('sharp');
+
+const OpenAI = require('openai');
+const { title } = require('process');
+
+const openai = new OpenAI({ apiKey: process.env.GPT_API_KEY });
+async function gptReq(imgArray = [], prompt = '') {
+    try {
+        const imagesContent = imgArray.map(img => ({
+            type: "image_url",
+            image_url: {
+                url: img
+            }
+        }));
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+                {
+                    role: "system",
+                    content: prompt
+                },
+                {
+                    role: "user",
+                    content: imagesContent
+                },
+            ],
+            max_tokens: 2048
+        });
+        console.log("GPT response: " + JSON.stringify(response.choices[0]));
+        return response.choices[0];
+    } catch (error) {
+        console.log("Error in gpt query: ", error);
+        throw error;
+    }
+}
+
+async function processImagesSequentially(base64Files, prompt) {
+    for (const base64File of base64Files) {
+        try {
+            let gptRes = await gptReq(base64File, prompt);
+        } catch (error) {
+            console.error("Error processing image:", error);
+        }
+    }
+}
 
 // 登入確認 middleware
 const isAuth = (req, res, next) => {
@@ -431,12 +476,12 @@ router.post('/fetchHomework', isAuth, isTeacher, async function (req, res, next)
 });
 
 router.post("/lesson/submitGrade", isAuth, isTeacher, async (req, res, next) => {
-    const {hwId, keepStatus, data} = req.body;
+    const { hwId, keepStatus, data } = req.body;
     let dataObj = JSON.parse(data);
     console.log(hwId, keepStatus, typeof dataObj);
     try {
         // Update the submitStatus first
-        await submissionModel.updateOne({hwId}, {
+        await submissionModel.updateOne({ hwId }, {
             $set: {
                 submitStatus: keepStatus
             }
@@ -603,9 +648,9 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
                 $set: {
                     // Update data if student submission exists
                     "submissions.$.isHandIn": newSubmissionData.isHandIn,
-                    "submissions.$.handInData": newSubmissionData.handInData, 
-                    "submissions.$.category": newSubmissionData.category, 
-                    "submissions.$.analysis": newSubmissionData.analysis, 
+                    "submissions.$.handInData": newSubmissionData.handInData,
+                    "submissions.$.category": newSubmissionData.category,
+                    "submissions.$.analysis": newSubmissionData.analysis,
                 }
             },
             { upsert: false } // Do not create a new document for this operation
@@ -632,7 +677,7 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
 
 router.post("/lesson/getPersonalSubmissions", isAuth, async (req, res, next) => {
     try {
-        let student = await memberModel.find({email: req.session.email});
+        let student = await memberModel.find({ email: req.session.email });
         student = student[0];
         let submissions = await submissionModel.find({
             "submissions.studentId": student.studentID
@@ -644,12 +689,56 @@ router.post("/lesson/getPersonalSubmissions", isAuth, async (req, res, next) => 
                 submissions: doc.submissions.filter(sub => sub.studentId === student.studentID)
             };
         });
-        res.send(JSON.stringify(personalSubmissions)); 
+        res.send(JSON.stringify(personalSubmissions));
     } catch (error) {
         console.error(error);
         res.status(500).send('Error getting the personal submission.');
     }
 });
+
+router.post("/aiAnalyze", async (req, res) => {
+    const { anaType, hwId, submissionId } = req.body;
+    try {
+        switch (anaType) {
+            case 'keyWords':
+                let submitHw = await submissionModel.findOne({ hwId, "submissions._id": submissionId }, { 'submissions.$': 1 });
+                submitHw = submitHw.submissions[0];
+                console.log(submitHw.handInData.files);
+                if (submitHw.handInData.files.length < 1) {
+                    console.log("No files to analyze.");
+                    res.status(500).send("No files to analyze.");
+                    return;
+                }
+                // Compress and convert each image to base64
+                const base64Files = await Promise.all(submitHw.handInData.files.map(async (file) => {
+                    return await compressImageToBase64(file.path);
+                }));
+                console.log(base64Files);
+                // AI Analysis
+                let gptRes = await gptReq(base64Files,
+                    "Analyze the uploaded image and extract keywords, focusing on high-frequency terms that are critical for guiding the discussion toward its goal and are related to the subject. Return the result as a JSON string in the format: ```json{'keywords': ['keyword1','keyword2','keyword3',...]}```");
+                let resContent = JSON.parse(gptRes.message.content.replace("```json", "").replace("```", ""));
+
+                await submissionModel.updateOne(
+                    { hwId, "submissions._id": submissionId },
+                    {
+                        $set: {
+                            "submissions.$.analysis.result": [{
+                                title: "關鍵字",
+                                content: resContent.keywords
+                            }]
+                        }
+                    }
+                );
+                res.send(200);
+                break;
+        }
+
+        res.status(200);
+    } catch (error) {
+        res.status(500).send(`分析錯誤： ${error}`);
+    }
+})
 
 //==== Common
 // Route to display an individual file based on its ID
@@ -673,11 +762,11 @@ router.get('/:lessonId/:fileId', async (req, res) => {
 router.get('/getHw/:hwId/:fileId', async (req, res) => {
     try {
         const { hwId, fileId } = req.params;
-        const submission = await submissionModel.findOne({hwId: hwId});
+        const submission = await submissionModel.findOne({ hwId: hwId });
         if (!submission) {
             return res.status(404).send('Submission not found');
         }
-        
+
         let fileFound = null;
 
         // Iterate through all the submissions to find the file by fileId
@@ -698,4 +787,27 @@ router.get('/getHw/:hwId/:fileId', async (req, res) => {
         res.status(500).send('Error retrieving the file from the database.');
     }
 });
+
+// Compress Image and Convert to Base64
+async function compressImageToBase64(inputPath) {
+    const compressedOutputPath = `${inputPath}-compressed.png`;
+
+    try {
+        await sharp(inputPath)
+            .resize(1920)
+            .png({ quality: 100, compressionLevel: 9 })
+            .toFile(compressedOutputPath);
+
+        const fileBuffer = fs.readFileSync(compressedOutputPath);
+        const base64Data = fileBuffer.toString('base64');
+        const mimeType = 'image/png';
+
+        fs.unlinkSync(compressedOutputPath);
+        return `data:${mimeType};base64,${base64Data}`;
+    } catch (error) {
+        console.error("Error compressing image:", error);
+        throw error;
+    }
+}
+
 module.exports = router;

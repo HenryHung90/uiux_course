@@ -544,6 +544,14 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
         })
 }
 
+function showAiAnalysisModal() {
+    // $.post("/course/lesson/get");
+
+    let bsModal = bootstrap.Modal.getInstance($("#aiAnalysisModal"));
+    if(!bsModal){bsModal = new bootstrap.Modal($("#aiAnalysisModal"))}
+    bsModal.show();
+}
+
 /**
  * 
  * @param {*} status 0=keep grade, 1=submit grade
@@ -666,7 +674,7 @@ function showLessonData(lessonIndex) {
                 <button type="button" class="btn btn-outline-dark">修改</button>
                 <button type="button" class="btn btn-outline-danger" onclick="removeHomework('${lesson._id}', '${hw._id}')">刪除</button>
                 <button type="button" class="btn btn-outline-primary" onclick="showCorrectHomeworkModal('${hw._id}', '${hw.name}', ${hw.isAnalysis}, '${hw.attribute}', ${hw.isHandInByIndividual})">批改</button>
-                <button type="button" class="btn btn-outline-success">AI 分析</button>
+                ${hw.isAnalysis ? `<button type="button" class="btn btn-outline-success" onclick="showAiAnalysisModal()">AI 分析</button>` : ``}
             </td>
         </tr>
     `).join('')}`;
