@@ -12,6 +12,7 @@ const sharp = require('sharp');
 
 const OpenAI = require('openai');
 const { title } = require('process');
+const { error } = require('console');
 
 const openai = new OpenAI({ apiKey: process.env.GPT_API_KEY });
 async function gptReq(imgArray = [], prompt = '') {
@@ -58,14 +59,14 @@ async function processImagesSequentially(base64Files, prompt) {
 const isAuth = (req, res, next) => {
     if (!req.session.isAuth) {
         console.log("Doesn't have the permission");
-        return res.redirect("/auth/");
+        return res.redirect("/auth/?err=請先（重新）登入❗️");
     }
     next();
 }
 const isTeacher = (req, res, next) => {
     if (!req.session.isTeacher) {
         console.log("Doesn't have the permission");
-        return res.redirect("/auth/");
+        return res.redirect("/auth/?err=請使用老師帳號登入❗️");
     }
     next();
 }
@@ -598,6 +599,49 @@ router.get('/join/', isAuth, async function (req, res, next) {
     }
 });
 
+router.get('/joinCategory', isAuth, async function (req, res, next) {
+    let stu = await memberModel.findOne({ email: req.session.email });
+    const { semester, lessonId, hwId, catId, type } = req.query;
+    try {
+        try {
+            // check category exist
+            const lesson = await Lesson.findOne({ 
+                semester, 
+                "_id": lessonId, 
+                "hws._id": hwId, 
+                "hws.categories._id": catId 
+            });          
+            if(!lesson)  {
+                throw "找不到主題";
+            }
+        } catch (error) {
+            console.log("確認主題錯誤："+error);
+            return res.redirect("/?err=找不到指定的主題 😢");
+        }
+
+        await Lesson.updateOne({ semester, _id: lessonId, "hws._id": hwId, "hws.categories._id": catId },
+            {
+                $push: {
+                    "hws.$[hw].categories.$[category].member": {
+                        studentID: stu.studentID,
+                        studentName: stu.name,
+                        memberId: stu._id, // To make sure same person
+                    }
+                }
+            },
+            {
+                arrayFilters: [
+                    { "hw._id": hwId }, // 跟上面配對 `hws`
+                    { "category._id": catId }  // 跟上面配對 `categories` 
+                ]
+            });
+        res.redirect("/?msg=主題加入成功！🤟🏻");
+    } catch (error) {
+        console.error('Error updating member:', error);
+        res.redirect("/?err=主題加入失敗：請稍候再試 💦");
+    }
+});
+
 router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, res, next) => {
     try {
         let stu = await memberModel.findOne({ email: req.session.email });
@@ -643,6 +687,7 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
         };
 
         const result = await submissionModel.updateOne(
+            // TODO hwId 留一個就好 
             { hwId: hwId, "submissions.studentId": stu.studentID }, // Query to find the specific student submission
             {
                 $set: {

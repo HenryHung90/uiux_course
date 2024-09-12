@@ -36,7 +36,35 @@ const shareStuffModal = {
     },
 }
 
+/**
+ * Form submit util
+ */
+const formUtil = {
+    /** Create a form and send get request */
+    get(actionUrl, params) {
+        // Create a form element
+        const form = document.createElement("form");
+        form.method = "GET"; // Set method to GET
+        form.action = actionUrl; // Set the URL to which the form will be submitted
+    
+        // Dynamically create input elements for each parameter
+        for (const key in params) {
+            if (params.hasOwnProperty(key)) {
+                const input = document.createElement("input");
+                input.type = "hidden"; // Use hidden input fields to store parameters
+                input.name = key; // Set the name of the input (parameter name)
+                input.value = params[key]; // Set the value of the input (parameter value)
+                form.appendChild(input); // Add the input to the form
+            }
+        }
+    
+        // Append the form to the body (not displayed to the user)
+        document.body.appendChild(form);
+    
+        // Submit the form
+        form.submit();
     }
+}
 
 $().ready(function () {
     updateSemesters();
@@ -227,7 +255,42 @@ async function showLessonData(lessonIndex) {
     $("#homework-table tbody").append(newHome);
 }
 
-function showHandInHwModal(hwName="", hw_id="") {
+const category = {
+    addPersonalCat(hwId) {
+        let modalBody = `
+            <div class="mb-3">
+                <label class="form-label" for="catId">主題代碼</label>
+                <input class="form-control mb-3" id="catId" type="text">
+            </div>
+        `;
+        let modalFooter = `
+            <button type="button" class="btn btn-secondary" data-bs-dismiss='shareStuffModal'>取消</button>
+            <button type="button" id="joinCatBtn" class="btn btn-primary">加入</button>
+        `;
+        shareStuffModal.resetCustomFunc();
+        // Set submit func
+        shareStuffModal.addCustomFunction("joinCat", function () {
+            let catId = $("#catId").val();
+            if(!catId) {
+                alert("請輸入主題代碼！😡");
+                return;
+            }
+            
+            formUtil.get("/course/joinCategory", {
+                semester : currentSemester.name,
+                lessonId : $(".lesson-list-chosen").attr("id").replace("Btn", ""),
+                hwId,
+                catId,
+                type: "p" // personal
+            });
+        })
+        shareStuffModal.setData(`加入主題`, modalBody, modalFooter);
+        $("#joinCatBtn").on("click", () => { shareStuffModal.callCustomFunction("joinCat"); });
+        shareStuffModal.show();
+    }
+}
+
+function showHandInHwModal(hwName = "", hw_id = "") {
     let modalBody = `
         <div class="mb-3" id="hwAddLink">
             <div class="form-label">
