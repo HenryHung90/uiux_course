@@ -23,7 +23,9 @@ var app = express();
 
 // Mongoose mongoDB 連線
 mongoose.set('strictQuery', true); // Only save data specified in Schema
-mongoose.connect(process.env.mongodbUrl);
+mongoose.connect(process.env.mongodbUrl).catch(error => {
+  console.error('Error connecting to MongoDB:', error);
+});
 const db = mongoose.connection;
 db.on('error', (error) => console.error("Connect error: ", error));
 // Connect successfully

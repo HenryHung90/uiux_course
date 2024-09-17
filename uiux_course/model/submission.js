@@ -33,7 +33,7 @@ const submissionSchema = mongoose.Schema({
         analysis: {
             result: [{
                 title: String,
-                content: String
+                content: [String]
             }]
         }
     }]
