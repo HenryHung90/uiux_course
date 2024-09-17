@@ -16,13 +16,13 @@ router.post("/register", async function(req, res, next) {
     const {name, pw, email, isTeacher, tCode, studentID} = req.body;
     if(!name || !email || !pw) {
       console.log("No data", name, email, pw);
-      return res.redirect("register"); // TODO: add error msg to client
+      return res.redirect("/auth/register?msg=姓名、email、密碼皆需輸入！🙏🏻");
     }
     // Whether account already exist
     let member = await memberModel.findOne({email});
     if(member) {
       console.log("Email has been registered");
-      return res.redirect("register"); // TODO: add error msg to client
+      return res.redirect("/auth/register?msg=Email 已註冊過！😱");
     }
     let isT = false;
     if(isTeacher) {
@@ -30,18 +30,18 @@ router.post("/register", async function(req, res, next) {
         if(tCode!=process.env.teacherRegisterCode) {
             console.log("tCode not correct");
             isT = false;
-            return res.redirect("register"); // TODO: add error msg to client
+            return res.redirect("/auth/register?msg=教師代碼輸入錯誤！🙅"); 
         } else {
             isT = true;
         }
     } else if(!studentID) {
-        return res.redirect("register"); // TODO: add error msg to client
+        return res.redirect("/auth/register?msg=學生註冊請輸入學號！🫶🏻"); 
     }
     // Create account
     const hashPW = await bcrypt.hash(pw, 10); // Hash the pw
     member = new memberModel({name, email, pw: hashPW, isTeacher: isT, studentID});
     await member.save();
-    res.redirect("login"); // TODO: add error msg to client
+    res.redirect("/auth/login/?msg=註冊成功，請登入開始使用😊");
 });
 
 router.get('/login', function(req, res, next) {
