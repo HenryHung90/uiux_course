@@ -144,12 +144,12 @@ async function showLessonData(lessonIndex) {
                 studentId: '',
                 studentName: '',
                 handInData: {
-                    links: [{}],
-                    files: [{}]
                 },
                 category: {
                     name: '',
                     catId: '',
+                    links: [],
+                    files: []
                 },
                 feedback: '',
                 score: '',
