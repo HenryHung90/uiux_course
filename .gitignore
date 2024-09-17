@@ -132,3 +132,7 @@ dist
 # Custom additions
 /uiux_course/uploads
 .vscode/settings.json
+
+# package-lock
+/uiux_course/package-lock.json
+/uiux_course/ecosystem.config.js
