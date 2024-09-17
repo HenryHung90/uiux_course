@@ -804,6 +804,24 @@ router.get('/:lessonId/:fileId', async (req, res) => {
         res.status(500).send('Error retrieving the file from the database.');
     }
 });
+// Route to display hw ref file
+router.get('/:lessonId/:hwId/:fileId', async (req, res) => {
+    try {
+        const { lessonId, hwId, fileId } = req.params;
+        const lesson = await Lesson.findById(lessonId);
+        if (!lesson) {
+            return res.status(404).send('Lesson not found');
+        }
+        const file = lesson.hws.id(hwId).files.id(fileId);
+        if (!file) {
+            return res.status(404).send('File not found');
+        }
+        res.sendFile(path.resolve(file.path));
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error retrieving the file from the database.');
+    }
+});
 router.get('/getHw/:hwId/:fileId', async (req, res) => {
     try {
         const { hwId, fileId } = req.params;
