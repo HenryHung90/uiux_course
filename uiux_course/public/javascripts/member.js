@@ -190,10 +190,20 @@ async function showLessonData(lessonIndex) {
             <th>${index + 1}</th>
             <td>${hw.name ? hw.name : ''}</td>
             <td>${hw.description ? hw.description : ''}</td>
-            <td>${hw.src ? hw.src.map(src => {
-        `
-                <a href="${src.path}" target="_blank">${src.name}</a>
-            `}).join('') : ''}</td>
+            <td>
+                <ul class="m-0">
+                    ${hw.files ? hw.files.map(file => `
+                        <li>    
+                            <a href="course/${lesson._id}/${hw._id}/${file._id}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;">${file.name}</a>
+                        </li>
+                    `).join('') : ''}
+                    ${hw.links ? hw.links.map(link => `
+                        <li>    
+                            <a href="${link.url}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;">${link.url}</a>
+                        </li>
+                    `).join('') : ''}
+                </ul>
+            </td>
             <td>${hw.attribute == "g" ? "團體" : "個人"}</td>
             <td>${hw.isRegular ? "例行作業" :
             hw.isCatCustom ?
