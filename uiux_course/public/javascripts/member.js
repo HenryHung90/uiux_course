@@ -189,6 +189,7 @@ async function showLessonData(lessonIndex) {
         <tr>
             <th>${index + 1}</th>
             <td>${hw.name ? hw.name : ''}</td>
+            <td>${hw.description ? hw.description : ''}</td>
             <td>
                 <ul class="m-0">
                     ${hw.files ? hw.files.map(file => `
