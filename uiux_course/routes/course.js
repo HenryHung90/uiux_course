@@ -576,6 +576,7 @@ router.post("/fetchSemesters/stu", isAuth, async function (req, res, next) {
 });
 
 //===== Student
+// 加入學期
 router.get('/join/', isAuth, async function (req, res, next) {
     const sCode = req.query.s_code;
     try {
@@ -599,9 +600,48 @@ router.get('/join/', isAuth, async function (req, res, next) {
     }
 });
 
+/// 分組 ///
+// 新增組別（主題）
+router.post('/createCat', isAuth, async function (req, res, next) {
+    let stu = await memberModel.findOne({ email: req.session.email });
+    const {lessonId, hwId, catName } = req.body;
+    try {
+        // Find the lesson by lessonId
+        const lesson = await Lesson.findOne({ _id: lessonId });
+
+        if (!lesson) {
+            console.log("Lesson not found");
+            return res.status(404).json({ message: 'Lesson not found' });
+        }
+        
+        // Find the homework (hws) by hwId
+        const hw = lesson.hws.id(hwId);
+        
+        if (!hw) {
+            console.log("Homework not found");
+            return res.status(404).json({ message: 'Homework not found' });
+        }
+
+        hw.categories.push({
+            name: catName, 
+            member: [{
+                studentID: stu.studentID,
+                studentName: stu.name,
+                memberId: stu._id,
+            }
+            ]
+        });
+
+        await lesson.save();
+        return res.status(200);
+    } catch (error) {
+        console.error('新增組題（主別）錯誤 :', error);
+        res.sendStatus(500).send('新增組題（主別）錯誤');
+    }
+});
 router.get('/joinCategory', isAuth, async function (req, res, next) {
     let stu = await memberModel.findOne({ email: req.session.email });
-    const { semester, lessonId, hwId, catId, type } = req.query;
+    const { semester, lessonId, hwId, catId } = req.query;
     try {
         try {
             // check category exist
@@ -647,7 +687,7 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
         let stu = await memberModel.findOne({ email: req.session.email });
         const files = req.files;
         let fileInfos = [];
-        const { hwId, links } = req.body;
+        const { hwId, links, catName, catId } = req.body;
         // files
         if (files && files.length > 0) {
             const filePromises = files.map((file) => {
@@ -680,7 +720,7 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
                 links: JSON.parse(links),
                 files: fileInfos
             },
-            category: { name: "Category Name", catId: "cat123" }, // TODO 9/3 Start From here
+            category: { name: catName, catId },
             analysis: {
                 result: []
             }
@@ -731,7 +771,8 @@ router.post("/lesson/getPersonalSubmissions", isAuth, async (req, res, next) => 
             return {
                 ...doc.toObject(),
                 // TODO 將 score 根據送出狀態回傳
-                submissions: doc.submissions.filter(sub => sub.studentId === student.studentID)
+                submissions: doc.submissions.filter(sub => sub.studentId === student.studentID),
+                studentId: student.studentID
             };
         });
         res.send(JSON.stringify(personalSubmissions));
@@ -796,6 +837,30 @@ router.get('/:lessonId/:fileId', async (req, res) => {
         }
         const file = lesson.files.id(fileId);
         if (!file) {
+            return res.status(404).send('File not found');
+        }
+        res.sendFile(path.resolve(file.path));
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error retrieving the file from the database.');
+    }
+});
+router.get('/:lessonId/:hwId/:fileId', async (req, res) => {
+    try {
+        const { lessonId, hwId, fileId } = req.params;
+        const lesson = await Lesson.findById(lessonId);
+        if (!lesson) {
+            console.log("Lesson not found");
+            return res.status(404).send('Lesson not found');
+        }
+        const hw = lesson.hws.id(hwId);
+        if (!hw) {
+            console.log("Homework not found");
+            return res.status(404).send('Homework not found');
+        }
+        let file = hw.files.id(fileId);
+        if (!file) {
+            console.log("File not found");
             return res.status(404).send('File not found');
         }
         res.sendFile(path.resolve(file.path));
