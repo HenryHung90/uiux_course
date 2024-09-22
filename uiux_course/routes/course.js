@@ -622,6 +622,15 @@ router.post('/createCat', isAuth, async function (req, res, next) {
             return res.status(404).json({ message: 'Homework not found' });
         }
 
+        const isStuInAnyCategory = hw.categories.some(category => {
+            category.member.some(member => member.memberId.toString() === stu._id.toString())
+        });
+
+        if (isStuInAnyCategory) {
+            console.log("Student already exists in one of the categories");
+            return res.status(400).json({ message: 'Student already exists in one of the categories' });
+        }
+
         hw.categories.push({
             name: catName, 
             member: [{
@@ -633,7 +642,7 @@ router.post('/createCat', isAuth, async function (req, res, next) {
         });
 
         await lesson.save();
-        return res.status(200);
+        return res.sendStatus(200);
     } catch (error) {
         console.error('新增組題（主別）錯誤 :', error);
         res.sendStatus(500).send('新增組題（主別）錯誤');
