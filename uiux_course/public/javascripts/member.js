@@ -143,10 +143,12 @@ async function showLessonData(lessonIndex) {
         // 已繳交作業
         let lessonSub = submissions.find((ele) =>
             ele.hwId.toString() == lesson.hws[i]._id.toString());
-        let isStudentInCategory;
-        isStudentInCategory = lesson.hws[i].categories.some(category =>
-            category.member.some(member => member.studentID === submissions[0].studentId)
-        );
+        let isStudentInCategory = false;
+        if(submissions.length > 0) {
+            isStudentInCategory = lesson.hws[i].categories.some(category =>
+                category.member.some(member => member.studentID === submissions[0].studentId)
+            );
+        }
 
         lesson.hws[i].submission = lessonSub || {
             submissions: [{
