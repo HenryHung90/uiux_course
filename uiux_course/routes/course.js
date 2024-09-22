@@ -837,47 +837,6 @@ router.post("/aiAnalyze", async (req, res) => {
 
 //==== Common
 // Route to display an individual file based on its ID
-router.get('/:lessonId/:fileId', async (req, res) => {
-    try {
-        const { lessonId, fileId } = req.params;
-        const lesson = await Lesson.findById(lessonId);
-        if (!lesson) {
-            return res.status(404).send('Lesson not found');
-        }
-        const file = lesson.files.id(fileId);
-        if (!file) {
-            return res.status(404).send('File not found');
-        }
-        res.sendFile(path.resolve(file.path));
-    } catch (error) {
-        console.error(error);
-        res.status(500).send('Error retrieving the file from the database.');
-    }
-});
-router.get('/:lessonId/:hwId/:fileId', async (req, res) => {
-    try {
-        const { lessonId, hwId, fileId } = req.params;
-        const lesson = await Lesson.findById(lessonId);
-        if (!lesson) {
-            console.log("Lesson not found");
-            return res.status(404).send('Lesson not found');
-        }
-        const hw = lesson.hws.id(hwId);
-        if (!hw) {
-            console.log("Homework not found");
-            return res.status(404).send('Homework not found');
-        }
-        let file = hw.files.id(fileId);
-        if (!file) {
-            console.log("File not found");
-            return res.status(404).send('File not found');
-        }
-        res.sendFile(path.resolve(file.path));
-    } catch (error) {
-        console.error(error);
-        res.status(500).send('Error retrieving the file from the database.');
-    }
-});
 router.get('/getHw/:hwId/:fileId', async (req, res) => {
     try {
         const { hwId, fileId } = req.params;
@@ -901,6 +860,48 @@ router.get('/getHw/:hwId/:fileId', async (req, res) => {
             return res.status(404).send('File not found');
         }
         res.sendFile(path.resolve(fileFound.path));
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error retrieving the file from the database.');
+    }
+});
+router.get('/:lessonId/:fileId', async (req, res) => {
+    try {
+        const { lessonId, fileId } = req.params;
+        const lesson = await Lesson.findById(lessonId);
+        if (!lesson) {
+            return res.status(404).send('Lesson not found');
+        }
+        const file = lesson.files.id(fileId);
+        if (!file) {
+            return res.status(404).send('File not found');
+        }
+        res.sendFile(path.resolve(file.path));
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error retrieving the file from the database.');
+    }
+});
+// Hw ref file
+router.get('/:lessonId/:hwId/:fileId', async (req, res) => {
+    try {
+        const { lessonId, hwId, fileId } = req.params;
+        const lesson = await Lesson.findById(lessonId);
+        if (!lesson) {
+            console.log("Lesson not found");
+            return res.status(404).send('Lesson not found');
+        }
+        const hw = lesson.hws.id(hwId);
+        if (!hw) {
+            console.log("Homework not found");
+            return res.status(404).send('Homework not found');
+        }
+        let file = hw.files.id(fileId);
+        if (!file) {
+            console.log("File not found");
+            return res.status(404).send('File not found');
+        }
+        res.sendFile(path.resolve(file.path));
     } catch (error) {
         console.error(error);
         res.status(500).send('Error retrieving the file from the database.');

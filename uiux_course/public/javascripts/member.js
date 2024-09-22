@@ -187,7 +187,7 @@ async function showLessonData(lessonIndex) {
         <ul>
             ${lesson.files.map(file => `
                 <li>
-                    <a href="course/lessons/${lesson._id}/files/${file._id}" target="_blank">${file.name}</a>
+                    <a href="course/${lesson._id}/${file._id}" target="_blank">${file.name}</a>
                 </li>
             `).join('')}
         </ul>
