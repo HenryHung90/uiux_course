@@ -776,14 +776,18 @@ router.post("/lesson/getPersonalSubmissions", isAuth, async (req, res, next) => 
         let submissions = await submissionModel.find({
             "submissions.studentId": student.studentID
         });
-        const personalSubmissions = submissions.map(doc => {
-            return {
-                ...doc.toObject(),
-                // TODO 將 score 根據送出狀態回傳
-                submissions: doc.submissions.filter(sub => sub.studentId === student.studentID),
-                studentId: student.studentID
-            };
-        });
+        const personalSubmissions = {
+            studentId: student.studentID,
+            // TODO 將 score 根據送出狀態回傳
+            submissions: submissions.flatMap(doc =>
+                doc.submissions
+                    .filter(sub => sub.studentId === student.studentID)
+                    .map(sub => ({
+                        ...sub.toObject(),  // 將 submission 轉為對象
+                        hwId: doc.hwId      // 將 hwId 加入每個 submission 中
+                    }))
+            )
+        };
         res.send(JSON.stringify(personalSubmissions));
     } catch (error) {
         console.error(error);

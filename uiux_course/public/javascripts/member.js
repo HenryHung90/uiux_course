@@ -137,39 +137,37 @@ async function fetchPersonalSubmission() {
 
 async function showLessonData(lessonIndex) {
     await fetchLessons();
-    let submissions = await fetchPersonalSubmission();
+    let submissionData = await fetchPersonalSubmission();
+    let submissions = submissionData.submissions;
+    let studentId = submissionData.studentId;
     let lesson = lessons[lessonIndex];
     for (let i = 0; i < lesson.hws.length; i++) {
         // 已繳交作業
         let lessonSub = submissions.find((ele) =>
             ele.hwId.toString() == lesson.hws[i]._id.toString());
         let isStudentInCategory = false;
-        if(submissions.length > 0) {
-            isStudentInCategory = lesson.hws[i].categories.some(category =>
-                category.member.some(member => member.studentID === submissions[0].studentId)
-            );
-        }
+        isStudentInCategory = lesson.hws[i].categories.some(category =>
+            category.member.some(member => member.studentID === studentId)
+        );
 
         lesson.hws[i].submission = lessonSub || {
-            submissions: [{
-                isHandIn: '',
-                studentId: '',
-                studentName: '',
-                handInData: {
-                    links: [],
-                    files: []
-                },
-                category: '',
-                feedback: '',
-                score: '',
-                analysis: {
-                    result: []
-                }
-            }]
+            isHandIn: '',
+            studentId: '',
+            studentName: '',
+            handInData: {
+                links: [],
+                files: []
+            },
+            category: '',
+            feedback: '',
+            score: '',
+            analysis: {
+                result: []
+            }
         };
 
         // For indicate and save cat while upload hw
-        lesson.hws[i].submission.submissions[0].category = isStudentInCategory ?
+        lesson.hws[i].submission.category = isStudentInCategory ?
             {
                 name: lesson.hws[i].categories[0].name,
                 catId: lesson.hws[i].categories[0]._id,
@@ -230,10 +228,10 @@ async function showLessonData(lessonIndex) {
             `}).join('') : ''}</td>
             <td>${hw.attribute == "g" ? "團體" : "個人"}</td>
             <td>${hw.isRegular ? "例行作業" :
-            hw.submission.submissions[0].category.catId ?
-                hw.attribute == "p" ? `<button type="button" class="btn btn-outline-dark" onclick="category.showPersonalCat('${hw.submission.submissions[0].category.name}')">組別（主題）</button>`
-                    : `<button type="button" class="btn btn-outline-dark" onclick="category.showGroupCat('${hw.submission.submissions[0].category.name}', 
-                        '${hw.submission.submissions[0].category.catId}', '${JSON.stringify(hw.submission.submissions[0].category.member).replace(/'/g, "\\'").replace(/"/g, '&quot;')}')">組別（主題）</button>`
+            hw.submission.category.catId ?
+                hw.attribute == "p" ? `<button type="button" class="btn btn-outline-dark" onclick="category.showPersonalCat('${hw.submission.category.name}')">組別（主題）</button>`
+                    : `<button type="button" class="btn btn-outline-dark" onclick="category.showGroupCat('${hw.submission.category.name}', 
+                        '${hw.submission.category.catId}', '${JSON.stringify(hw.submission.category.member).replace(/'/g, "\\'").replace(/"/g, '&quot;')}')">組別（主題）</button>`
                 : hw.isCatCustom ?
                     hw.attribute == "p" ? `<button type="button" class="btn btn-outline-dark" onclick="category.createCat('${lesson._id}', '${hw._id}', ${lessonIndex})">自訂</button>`
                         : `<div class="btn-group">
@@ -245,22 +243,22 @@ async function showLessonData(lessonIndex) {
             </td>
             <td>
                 <ul class="my-1 p-0" style="list-style: none;">
-                    ${hw.submission.submissions[0].handInData.files ?
-            hw.submission.submissions[0].handInData.files.map(file => `
+                    ${hw.submission.handInData.files ?
+            hw.submission.handInData.files.map(file => `
                         <li class="d-flex align-items-center">    
                             <button type="button" class="btn btn-danger me-1">-</button> 
                             <a href="/course/getHw/${hw._id}/${file._id}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;"><img src="./images/file.svg" alt=""></a>
                         </li>
                     `).join('') : ''}
-                    ${hw.submission.submissions[0].handInData.links ?
-            hw.submission.submissions[0].handInData.links.map(link => `
+                    ${hw.submission.handInData.links ?
+            hw.submission.handInData.links.map(link => `
                         <li>    
                             <button type="button" class="btn btn-danger">-</button> 
                             <a href="${link.url}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;"><img src="./images/link.svg" alt=""></a>
                         </li>
                     `).join('') : ''}
                 </ul>
-                <button type="button" class="btn btn-outline-dark" onclick="showHandInHwModal('${hw.name}', '${hw._id}', '${hw.submission.submissions[0].category.name}', '${hw.submission.submissions[0].category.catId}')">+</button>
+                <button type="button" class="btn btn-outline-dark" onclick="showHandInHwModal('${hw.name}', '${hw._id}', '${hw.submission.category.name}', '${hw.submission.category.catId}')">+</button>
             </td>
             <td> 
                 ${hw.isAnalysis ? `
@@ -271,23 +269,23 @@ async function showLessonData(lessonIndex) {
                             </h2>
                             <div class="accordion-collapse collapse" id="collapseStuId${hw.submission._id}">
                                 <div class="accordion-body">
-                                    ${hw.submission.submissions[0].analysis.result.length > 0 ?
-                hw.submission.submissions[0].analysis.result.map(result => `
+                                    ${hw.submission.analysis.result.length > 0 ?
+                hw.submission.analysis.result.map(result => `
                                             <strong>${result.title}</strong>
                                             <p>${result.content.map(content =>
                     `#${content}`).join(' ')}</p>
                                             `).join('') :
                 `<p>暫無分析結果 😵‍💫</p>`
             }
-                                    <button type="button" class="btn btn-outline-dark" onclick="analyzeHw('${hw._id}', '${hw.submission.submissions[0]._id}')">（重新）分析</button>
+                                    <button type="button" class="btn btn-outline-dark" onclick="analyzeHw('${hw._id}', '${hw.submission._id}')">（重新）分析</button>
                                 </div>
                             </div>
                         </div>
                     </div>` :
             "此作業無 AI 分析"}
             </td>
-            <td>${hw.submission.submitStatus == 1 ? hw.submission.submissions[0].feedback/** TODO course 改：將 score 根據送出狀態回傳 */ : ``}</td>
-            <td>${hw.submission.submitStatus == 1 ? hw.submission.submissions[0].score : ``}</td>
+            <td>${hw.submission.submitStatus == 1 ? hw.submission.feedback/** TODO course 改：將 score 根據送出狀態回傳 */ : ``}</td>
+            <td>${hw.submission.submitStatus == 1 ? hw.submission.score : ``}</td>
         </tr>
     `).join('')}`;
     $("#homework-table tbody").append(newHome);
