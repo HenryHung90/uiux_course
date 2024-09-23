@@ -289,6 +289,7 @@ router.post("/addHw", isAuth, isTeacher, upload.any('files'), async function (re
             description,
             links,
             attribute,
+            isHandInByIndividual,
             isRegular,
             isAnalysis,
             isCatCustom,
@@ -326,6 +327,7 @@ router.post("/addHw", isAuth, isTeacher, upload.any('files'), async function (re
                     files: fileInfos,
                     links: links ? JSON.parse(links) : {},
                     attribute,
+                    isHandInByIndividual,
                     isRegular,
                     isCatCustom,
                     categories: categories ? JSON.parse(categories) : {},
@@ -462,7 +464,7 @@ router.post('/fetchHomework', isAuth, isTeacher, async function (req, res, next)
                 },
                 {
                     $group: {
-                        _id: "submissions.category.catId",
+                        _id: "$submissions.category.catId",
                         // Push same group of submission into an array
                         submissions: { $push: "$submissions" }
                     }
@@ -479,7 +481,7 @@ router.post('/fetchHomework', isAuth, isTeacher, async function (req, res, next)
 router.post("/lesson/submitGrade", isAuth, isTeacher, async (req, res, next) => {
     const { hwId, keepStatus, data } = req.body;
     let dataObj = JSON.parse(data);
-    console.log(hwId, keepStatus, typeof dataObj);
+    console.log(hwId, keepStatus, typeof dataObj, dataObj);
     try {
         // Update the submitStatus first
         await submissionModel.updateOne({ hwId }, {
@@ -489,17 +491,25 @@ router.post("/lesson/submitGrade", isAuth, isTeacher, async (req, res, next) => 
         });
 
         // Prepare bulk updates for submissions
-        const bulkOps = dataObj.map(submission => ({
-            updateOne: {
-                filter: { hwId, "submissions.studentId": submission.studentId },
-                update: {
-                    $set: {
-                        "submissions.$.feedback": submission.feedback,
-                        "submissions.$.score": submission.score
+        const bulkOps = dataObj.map(submission => {
+            const updateFields = {};
+
+            if (submission.feedback !== undefined) {
+                updateFields["submissions.$.feedback"] = submission.feedback;
+            }
+
+            if (submission.score !== undefined) {
+                updateFields["submissions.$.score"] = submission.score;
+            }
+            return {
+                updateOne: {
+                    filter: { hwId, "submissions.studentId": submission.studentId },
+                    update: {
+                        $set: updateFields
                     }
                 }
             }
-        }));
+        });
 
         // Execute all bulk operations at once
         await submissionModel.bulkWrite(bulkOps);
@@ -604,7 +614,7 @@ router.get('/join/', isAuth, async function (req, res, next) {
 // 新增組別（主題）
 router.post('/createCat', isAuth, async function (req, res, next) {
     let stu = await memberModel.findOne({ email: req.session.email });
-    const {lessonId, hwId, catName } = req.body;
+    const { lessonId, hwId, catName } = req.body;
     try {
         // Find the lesson by lessonId
         const lesson = await Lesson.findOne({ _id: lessonId });
@@ -613,10 +623,10 @@ router.post('/createCat', isAuth, async function (req, res, next) {
             console.log("Lesson not found");
             return res.status(404).json({ message: 'Lesson not found' });
         }
-        
+
         // Find the homework (hws) by hwId
         const hw = lesson.hws.id(hwId);
-        
+
         if (!hw) {
             console.log("Homework not found");
             return res.status(404).json({ message: 'Homework not found' });
@@ -632,7 +642,7 @@ router.post('/createCat', isAuth, async function (req, res, next) {
         }
 
         hw.categories.push({
-            name: catName, 
+            name: catName,
             member: [{
                 studentID: stu.studentID,
                 studentName: stu.name,
@@ -654,17 +664,17 @@ router.get('/joinCategory', isAuth, async function (req, res, next) {
     try {
         try {
             // check category exist
-            const lesson = await Lesson.findOne({ 
-                semester, 
-                "_id": lessonId, 
-                "hws._id": hwId, 
-                "hws.categories._id": catId 
-            });          
-            if(!lesson)  {
+            const lesson = await Lesson.findOne({
+                semester,
+                "_id": lessonId,
+                "hws._id": hwId,
+                "hws.categories._id": catId
+            });
+            if (!lesson) {
                 throw "找不到主題";
             }
         } catch (error) {
-            console.log("確認主題錯誤："+error);
+            console.log("確認主題錯誤：" + error);
             return res.redirect("/?err=找不到指定的主題 😢");
         }
 
@@ -696,7 +706,7 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
         let stu = await memberModel.findOne({ email: req.session.email });
         const files = req.files;
         let fileInfos = [];
-        const { hwId, links, catName, catId } = req.body;
+        const { semester, hwId, links, catName, catId } = req.body;
         // files
         if (files && files.length > 0) {
             const filePromises = files.map((file) => {
@@ -721,48 +731,108 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
             fileInfos = await Promise.all(filePromises);
         }
 
-        let newSubmissionData = {
-            studentId: stu.studentID,
-            isHandIn: true,
-            studentName: stu.name,
-            handInData: {
-                links: JSON.parse(links),
-                files: fileInfos
-            },
-            category: { name: catName, catId },
-            analysis: {
-                result: []
+        // Find the lesson by id
+        const hwObj = await Lesson.findOne({ semester, 'hws._id': hwId }, { 'hws.$': 1 });
+        const hw = hwObj.hws[0];
+        if (!hw) {
+            return res.status(404).send("找不到作業");
+        }
+
+        // Group hand in
+        if (hw.attribute == 'g' && !hw.isHandInByIndividual) {
+            let category = hw.categories.id(catId);
+
+            if (!category) {
+                return res.status(404).send('Category not found');
             }
-        };
 
-        const result = await submissionModel.updateOne(
-            // TODO hwId 留一個就好 
-            { hwId: hwId, "submissions.studentId": stu.studentID }, // Query to find the specific student submission
-            {
-                $set: {
-                    // Update data if student submission exists
-                    "submissions.$.isHandIn": newSubmissionData.isHandIn,
-                    "submissions.$.handInData": newSubmissionData.handInData,
-                    "submissions.$.category": newSubmissionData.category,
-                    "submissions.$.analysis": newSubmissionData.analysis,
+            for (let member of category.member) {
+                let newSubmissionData = {
+                    studentId: member.studentID,
+                    isHandIn: true,
+                    studentName: member.studentName,
+                    handInData: {
+                        links: JSON.parse(links),
+                        files: fileInfos
+                    },
+                    category: { name: category.name, catId: category._id },
+                    analysis: {
+                        result: []
+                    }
+                };
+
+                const result = await submissionModel.updateOne(
+                    { hwId: hwId, "submissions.studentId": member.studentID }, // Query to find specific student submission
+                    {
+                        $set: {
+                            "submissions.$.isHandIn": newSubmissionData.isHandIn,
+                            "submissions.$.handInData": newSubmissionData.handInData,
+                            "submissions.$.category": newSubmissionData.category,
+                            "submissions.$.analysis": newSubmissionData.analysis,
+                        }
+                    },
+                    { upsert: false } // Do not create a new document for this operation
+                );
+
+                // If no document was updated (i.e., no existing submission for this student), push a new one
+                if (result.modifiedCount === 0) {
+                    await submissionModel.updateOne(
+                        { hwId: hwId },
+                        {
+                            $push: {
+                                submissions: newSubmissionData // Add the new submission data
+                            }
+                        },
+                        { upsert: false } // Ensure the document exists, but don't create a new one
+                    );
                 }
-            },
-            { upsert: false } // Do not create a new document for this operation
-        );
+            }
 
-        // If no document was updated (i.e., no existing submission for this student), push a new one
-        if (result.modifiedCount === 0) {
-            await submissionModel.updateOne(
-                { hwId: hwId },
+            res.sendStatus(200);
+        } else {
+            let newSubmissionData = {
+                studentId: stu.studentID,
+                isHandIn: true,
+                studentName: stu.name,
+                handInData: {
+                    links: JSON.parse(links),
+                    files: fileInfos
+                },
+                category: { name: catName, catId },
+                analysis: {
+                    result: []
+                }
+            };
+
+            const result = await submissionModel.updateOne(
+                // TODO hwId 留一個就好 
+                { hwId: hwId, "submissions.studentId": stu.studentID }, // Query to find the specific student submission
                 {
-                    $push: {
-                        submissions: newSubmissionData // Add the new submission data
+                    $set: {
+                        // Update data if student submission exists
+                        "submissions.$.isHandIn": newSubmissionData.isHandIn,
+                        "submissions.$.handInData": newSubmissionData.handInData,
+                        "submissions.$.category": newSubmissionData.category,
+                        "submissions.$.analysis": newSubmissionData.analysis,
                     }
                 },
-                { upsert: false } // Ensure the document exists, but don't create a new one
+                { upsert: false } // Do not create a new document for this operation
             );
+
+            // If no document was updated (i.e., no existing submission for this student), push a new one
+            if (result.modifiedCount === 0) {
+                await submissionModel.updateOne(
+                    { hwId: hwId },
+                    {
+                        $push: {
+                            submissions: newSubmissionData // Add the new submission data
+                        }
+                    },
+                    { upsert: false } // Ensure the document exists, but don't create a new one
+                );
+            }
+            res.send(200);
         }
-        res.send(200);
     } catch (error) {
         console.log("Homework submit error: ", error);
         res.sendStatus(500);
@@ -784,7 +854,8 @@ router.post("/lesson/getPersonalSubmissions", isAuth, async (req, res, next) => 
                     .filter(sub => sub.studentId === student.studentID)
                     .map(sub => ({
                         ...sub.toObject(),  // 將 submission 轉為對象
-                        hwId: doc.hwId      // 將 hwId 加入每個 submission 中
+                        hwId: doc.hwId,      // 將 hwId 加入每個 submission 中
+                        submitStatus: doc.submitStatus
                     }))
             )
         };

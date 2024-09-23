@@ -165,7 +165,6 @@ async function showLessonData(lessonIndex) {
                 result: []
             }
         };
-
         // For indicate and save cat while upload hw
         lesson.hws[i].submission.category = isStudentInCategory ?
             {

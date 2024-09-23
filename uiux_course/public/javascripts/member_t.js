@@ -275,6 +275,9 @@ function addHomework() {
         
         // isAnalysis
         formData.append("isAnalysis", $("#isAnalysis").prop("checked") ? true : false);
+        
+        // isHandInByIndividual
+        formData.append("isHandInByIndividual", $("#isHandInByIndividual").prop("checked") ? true : false);
 
         // isRegular
         formData.append("isRegular", $("#isCatReg").prop("checked") ? true : false);
@@ -359,8 +362,8 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
                     let isHandIn = submission.isHandIn;
                     if (isHandIn) { handinNums++; }
                     let newRow = `<tr class="border rounded">
-                        <td>${index + 1}</td>
-                        <td>${submission.studentId}</td>
+                        <td id="${submission.studentId}">${index + 1}</td>
+                        <td name="studentId">${submission.studentId}</td>
                         <td>${submission.studentName}</td>
                         <td> 
                             <ul class="m-0">
@@ -377,8 +380,8 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
                             </ul>
                         </td>
                         <td>${submission.category.name ? submission.category.name : ''}</td>
-                        <td><textarea class="form-control" id="textarea_stuId" name="" rows="2">${isHandIn ? submission.feedback : '未繳交作業'}</textarea></td>
-                        <td style="width: 10%"><input class="form-control" type="text" name="" value="${isHandIn ? submission.score : 0}"></td>
+                        <td><textarea class="form-control" id="textarea_stuId" name="feedback" rows="2">${isHandIn ? submission.feedback : '未繳交作業'}</textarea></td>
+                        <td style="width: 10%"><input class="form-control" type="text" name="score" value="${isHandIn ? submission.score : 0}"></td>
                         <td style="display: ${isAnalysis ? '' : 'none'}"> 
                             <div class="accordion">
                                 <div class="accordion-item"> 
@@ -407,6 +410,7 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
                     .attr("style", `width: ${handinNums / submissions.length * 100}%`)
                     .text(`${handinNums} / ${submissions.length}`);
             } else {
+                submissions = JSON.parse(data);
                 if (isHandInByIndividual) {
                     let stuNum = 1;
                     submissions.forEach((groupSubmission) => {
@@ -415,14 +419,14 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
                             let isHandIn = submission.isHandIn;
                             if (isHandIn) { handinNums++; }
                             let newRow = `<tr class="border rounded">
-                                <td>${stuNum}</td>
-                                <td>${submission.studentId}</td>
+                                <td id="${submission.studentId}">${stuNum}</td>
+                                <td name="studentId">${submission.studentId}</td>
                                 <td>${submission.studentName}</td>
                                 <td> 
                                     <ul class="m-0">
                                         ${submission.handInData.files ? submission.handInData.files.map(file => `
                                             <li>    
-                                                <a href="${file.path}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;"><img src="./images/file.svg" alt=""></a>
+                                                <a href="course/getHw/${hw_id}/${file._id}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;"><img src="./images/file.svg" alt=""></a>
                                             </li>
                                         `).join('') : ''}
                                         ${submission.handInData.links ? submission.handInData.links.map(link => `
@@ -432,9 +436,9 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
                                         `).join('') : ''}
                                     </ul>
                                 </td>
-                                ${index == 0 ? `<td rowspan="${groupSubmission.length}">${submission.category.name}</td>` : ``}
-                                <td><textarea class="form-control" id="textarea_stuId" name="" rows="2">${isHandIn ? '' : '未繳交作業'}</textarea></td>
-                                <td style="width: 10%"><input class="form-control" type="text" name="" value="${isHandIn ? "" : 0}"></td>
+                                ${index == 0 ? `<td rowspan="${groupSubmission.submissions.length}">${submission.category.name}</td>` : ``}
+                                <td><textarea class="form-control" id="textarea_stuId" name="feedback" rows="2">${isHandIn ? `${submission.feedback}` : '未繳交作業'}</textarea></td>
+                                <td style="width: 10%"><input class="form-control" type="text" name="score" value="${isHandIn ? `${submission.score}` : 0}"></td>
                                 <td style="display: ${isAnalysis ? '' : 'none'}"> 
                                     <div class="accordion">
                                         <div class="accordion-item"> 
@@ -458,29 +462,29 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
                             </tr>`
                             console.log(index, submission);
                             tbody.append(newRow);
-                            tbody.append(`<tr><td colspan="8"></td><tr>`);
                         });
+                        tbody.append(`<tr><td colspan="8"></td><tr>`);
                     });
                     $("#hangInProgress > .progress-bar")
                         .attr("style", `width: ${handinNums / stuNum * 100}%`)
                         .text(`${handinNums} / ${stuNum}`);
                 } else {
-                    let stuNum = 1;
+                    let stuNum = 0;
                     submissions.forEach((groupSubmission) => {
                         groupSubmission.submissions.forEach((submission, index) => {
                             stuNum++;
                             let isHandIn = submission.isHandIn;
-                            if (isHandIn && index == 0) { handinNums++; }
+                            if (isHandIn) { handinNums++; }
                             let newRow = `<tr class="border rounded">
-                                <td>${index + 1}</td>
-                                <td>${submission.studentId}</td>
+                                <td id="${groupSubmission._id}">${index + 1}</td>
+                                <td name="studentId">${submission.studentId}</td>
                                 <td>${submission.studentName}</td>
                                 ${index == 0 ? `
-                                    <td rowspan="${groupSubmission.length}">
+                                    <td rowspan="${groupSubmission.submissions.length}">
                                         <ul class="m-0">
                                             ${submission.handInData.files ? submission.handInData.files.map(file => `
                                                 <li>    
-                                                    <a href="${file.path}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;"><img src="./images/file.svg" alt=""></a>
+                                                    <a href="course/getHw/${hw_id}/${file._id}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;"><img src="./images/file.svg" alt=""></a>
                                                 </li>
                                             `).join('') : ''}
                                             ${submission.handInData.links ? submission.handInData.links.map(link => `
@@ -492,12 +496,12 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
                                     </td>`: ``}
                                 ${index == 0 ? `<td rowspan="${groupSubmission.length}">${submission.category.name}</td>` : ``}
                                 ${index == 0 ? `
-                                    <td rowspan="${groupSubmission.length}">
-                                        <textarea class="form-control" id="textarea_stuId" name="" rows="2">${isHandIn ? '' : '未繳交作業'}</textarea>
+                                    <td rowspan="${groupSubmission.submissions.length}">
+                                        <textarea class="form-control" id="textarea_stuId" name="feedback" rows="2">${isHandIn ? `${submission.feedback}` : '未繳交作業'}</textarea>
                                     </td>`: ``}
-                                <td style="width: 10%"><input class="form-control" type="text" name="" value="${isHandIn ? "" : 0}"></td>
+                                <td style="width: 10%"><input class="form-control" type="text" name="score" value="${isHandIn ? `${submission.score}` : 0}"></td>
                                 ${index == 0 ? `
-                                    <td rowspan="${groupSubmission.length}">
+                                    <td rowspan="${groupSubmission.submissions.length}">
                                         <td style="display: ${isAnalysis ? '' : 'none'}"> 
                                             <div class="accordion">
                                                 <div class="accordion-item"> 
@@ -522,8 +526,8 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
                             </tr>`
                             console.log(index, submission);
                             tbody.append(newRow);
-                            tbody.append(`<tr><td colspan="8"></td><tr>`);
                         });
+                        tbody.append(`<tr><td colspan="8"></td><tr>`);
                     });
                     $("#hangInProgress > .progress-bar")
                         .attr("style", `width: ${handinNums / stuNum * 100}%`)
@@ -565,14 +569,28 @@ function submitGrade(status=0) {
     let submissionTable = $("#submissionTable");
     let submissions = submissionTable.find("tbody tr");
     let data = [];
+    let lastCat;
+    lastData = {
+        feedback: "",
+        score: ""
+    };
 
     submissions.each(function() {
         let row = $(this);
-        data.push({
-            studentId: row.find('td:eq(1)').text().trim(),
-            feedback: row.find('td:eq(5) textarea').val(),
-            score: row.find('td:eq(6) input').val()
-        });
+        if(row.find('td[name="studentId"]').text().trim() || 
+            row.find('textarea[name="feedback"]').val() || 
+            row.find('td[name="score"] input').val()
+        ) {
+            if(row.find('td').eq(0).attr('id').trim() != lastCat) {
+                lastData.feedback = row.find('textarea[name="feedback"]').val() || "";
+            }
+            data.push({
+                studentId: row.find('td[name="studentId"]').text().trim() || "",
+                feedback: lastData.feedback, 
+                score: row.find('input[name="score"]').val() || ""
+            });
+            lastCat = row.find('td').eq(0).attr('id').trim();
+        }
     });
     $.post("/course/lesson/submitGrade", {
         hwId: submissionTable.attr("hwId"),
