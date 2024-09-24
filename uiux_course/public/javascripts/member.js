@@ -143,11 +143,15 @@ async function showLessonData(lessonIndex) {
     let lesson = lessons[lessonIndex];
     for (let i = 0; i < lesson.hws.length; i++) {
         // 已繳交作業
-        let lessonSub = submissions.find((ele) =>
-            ele.hwId.toString() == lesson.hws[i]._id.toString());
-        const categoryWithStudent = lesson.hws[i].categories.find(category =>
-            category.member.some(member => member.studentID === studentId)
-        );
+        let lessonSub;
+        let categoryWithStudent;
+        if(submissions) {
+            lessonSub = submissions.find((ele) =>
+                ele.hwId.toString() == lesson.hws[i]._id.toString());
+            categoryWithStudent = lesson.hws[i].categories.find(category =>
+                category.member.some(member => member.studentID === studentId)
+            );
+        }
 
         lesson.hws[i].submission = lessonSub || {
             isHandIn: '',
