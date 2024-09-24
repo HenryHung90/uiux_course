@@ -16,6 +16,11 @@ const shareStuffModal = {
         if (!bsModal) { bsModal = new bootstrap.Modal($("#shareStuffModal")) }
         bsModal.show();
     },
+    hide: () => {
+        let bsModal = bootstrap.Modal.getInstance($("#shareStuffModal"));
+        if (!bsModal) { bsModal = new bootstrap.Modal($("#shareStuffModal")) }
+        bsModal.hide();
+    },
     customFunc: {},
     resetCustomFunc() {
         this.customFunc = {};
@@ -46,7 +51,7 @@ const formUtil = {
         const form = document.createElement("form");
         form.method = "GET"; // Set method to GET
         form.action = actionUrl; // Set the URL to which the form will be submitted
-    
+
         // Dynamically create input elements for each parameter
         for (const key in params) {
             if (params.hasOwnProperty(key)) {
@@ -57,10 +62,10 @@ const formUtil = {
                 form.appendChild(input); // Add the input to the form
             }
         }
-    
+
         // Append the form to the body (not displayed to the user)
         document.body.appendChild(form);
-    
+
         // Submit the form
         form.submit();
     }
@@ -132,32 +137,44 @@ async function fetchPersonalSubmission() {
 
 async function showLessonData(lessonIndex) {
     await fetchLessons();
-    let submissions = await fetchPersonalSubmission();
+    let submissionData = await fetchPersonalSubmission();
+    let submissions = submissionData.submissions;
+    let studentId = submissionData.studentId;
     let lesson = lessons[lessonIndex];
-    console.log("before: ", submissions);
     for (let i = 0; i < lesson.hws.length; i++) {
-        lessonSub = submissions.find((ele) =>
+        // 已繳交作業
+        let lessonSub = submissions.find((ele) =>
             ele.hwId.toString() == lesson.hws[i]._id.toString());
+        const categoryWithStudent = lesson.hws[i].categories.find(category =>
+            category.member.some(member => member.studentID === studentId)
+        );
+
         lesson.hws[i].submission = lessonSub || {
-            submissions: [{
-                isHandIn: '',
-                studentId: '',
-                studentName: '',
-                handInData: {
-                },
-                category: {
-                    name: '',
-                    catId: '',
-                    links: [],
-                    files: []
-                },
-                feedback: '',
-                score: '',
-                analysis: {
-                    result: []
-                }
-            }]
+            isHandIn: '',
+            studentId: '',
+            studentName: '',
+            handInData: {
+                links: [],
+                files: []
+            },
+            category: '',
+            feedback: '',
+            score: '',
+            analysis: {
+                result: []
+            }
         };
+        // For indicate and save cat while upload hw
+        lesson.hws[i].submission.category = categoryWithStudent ?
+            {
+                name: categoryWithStudent.name,
+                catId: categoryWithStudent._id,
+                member: categoryWithStudent.member
+            } : {
+                name: '',
+                catId: '',
+                member: []
+            };
     }
     $(".lesson-list-chosen").removeClass("lesson-list-chosen");
     $(`#${lesson._id}Btn`).addClass("lesson-list-chosen");
@@ -168,7 +185,7 @@ async function showLessonData(lessonIndex) {
         <ul>
             ${lesson.files.map(file => `
                 <li>
-                    <a href="course/lessons/${lesson._id}/files/${file._id}" target="_blank">${file.name}</a>
+                    <a href="course/${lesson._id}/${file._id}" target="_blank">${file.name}</a>
                 </li>
             `).join('')}
         </ul>
@@ -182,7 +199,6 @@ async function showLessonData(lessonIndex) {
     `;
     $("#pills-material").append(newMat);
 
-    console.log(lessons);
     // Homework
     $("#homework-table tbody").empty();
     let newHome = `${lesson.hws.map((hw, index) => `
@@ -204,35 +220,43 @@ async function showLessonData(lessonIndex) {
                     `).join('') : ''}
                 </ul>
             </td>
+            <td>${hw.src ? hw.src.map(src => {
+        `
+                <a href="${src.path}" target="_blank">${src.name}</a>
+            `}).join('') : ''}</td>
             <td>${hw.attribute == "g" ? "團體" : "個人"}</td>
             <td>${hw.isRegular ? "例行作業" :
-            hw.isCatCustom ?
-                hw.attribute == "p" ? `<button type="button" class="btn btn-outline-dark">自訂</button>`
-                    : `<div class="btn-group">
-                                <button type="button" class="btn btn-outline-dark" onclick="">加入</button>
-                                <button type="button" class="btn btn-outline-dark">新增</button>
-                            </div>`
-                : `<button type="button" class="btn btn-outline-dark" onclick="category.addPersonalCat('${hw._id}')">加入</button>`
+            hw.submission.category.catId ?
+                hw.attribute == "p" ? `<button type="button" class="btn btn-outline-dark" onclick="category.showPersonalCat('${hw.submission.category.name}')">組別（主題）</button>`
+                    : `<button type="button" class="btn btn-outline-dark" onclick="category.showGroupCat('${hw.submission.category.name}', 
+                        '${hw.submission.category.catId}', '${JSON.stringify(hw.submission.category.member).replace(/'/g, "\\'").replace(/"/g, '&quot;')}')">組別（主題）</button>`
+                : hw.isCatCustom ?
+                    hw.attribute == "p" ? `<button type="button" class="btn btn-outline-dark" onclick="category.createCat('${lesson._id}', '${hw._id}', ${lessonIndex})">自訂</button>`
+                        : `<div class="btn-group">
+                            <button type="button" class="btn btn-outline-dark" onclick="category.joinCat('${hw._id}')">加入</button>
+                            <button type="button" class="btn btn-outline-dark" onclick="category.createCat('${lesson._id}', '${hw._id}', ${lessonIndex})">新增</button>
+                        </div>`
+                    : `<button type="button" class="btn btn-outline-dark" onclick="category.joinCat('${hw._id}')">加入</button>`
         }
             </td>
             <td>
                 <ul class="my-1 p-0" style="list-style: none;">
-                    ${hw.submission.submissions[0].handInData.files ?
-            hw.submission.submissions[0].handInData.files.map(file => `
+                    ${hw.submission.handInData.files ?
+            hw.submission.handInData.files.map(file => `
                         <li class="d-flex align-items-center">    
                             <button type="button" class="btn btn-danger me-1">-</button> 
                             <a href="/course/getHw/${hw._id}/${file._id}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;"><img src="./images/file.svg" alt=""></a>
                         </li>
                     `).join('') : ''}
-                    ${hw.submission.submissions[0].handInData.links ?
-            hw.submission.submissions[0].handInData.links.map(link => `
+                    ${hw.submission.handInData.links ?
+            hw.submission.handInData.links.map(link => `
                         <li>    
                             <button type="button" class="btn btn-danger">-</button> 
                             <a href="${link.url}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;"><img src="./images/link.svg" alt=""></a>
                         </li>
                     `).join('') : ''}
                 </ul>
-                <button type="button" class="btn btn-outline-dark" onclick="showHandInHwModal('${hw.name}', '${hw._id}')">+</button>
+                <button type="button" class="btn btn-outline-dark" onclick="showHandInHwModal('${hw.name}', '${hw._id}', '${hw.submission.category.name}', '${hw.submission.category.catId}')">+</button>
             </td>
             <td> 
                 ${hw.isAnalysis ? `
@@ -243,64 +267,169 @@ async function showLessonData(lessonIndex) {
                             </h2>
                             <div class="accordion-collapse collapse" id="collapseStuId${hw.submission._id}">
                                 <div class="accordion-body">
-                                    ${hw.submission.submissions[0].analysis.result.length > 0 ?
-                hw.submission.submissions[0].analysis.result.map(result => `
+                                    ${hw.submission.analysis.result.length > 0 ?
+                hw.submission.analysis.result.map(result => `
                                             <strong>${result.title}</strong>
                                             <p>${result.content.map(content =>
                     `#${content}`).join(' ')}</p>
                                             `).join('') :
                 `<p>暫無分析結果 😵‍💫</p>`
             }
-                                    <button type="button" class="btn btn-outline-dark" onclick="analyzeHw('${hw._id}', '${hw.submission.submissions[0]._id}')">（重新）分析</button>
+                                    <button type="button" class="btn btn-outline-dark" onclick="analyzeHw('${hw._id}', '${hw.submission._id}')">（重新）分析</button>
                                 </div>
                             </div>
                         </div>
                     </div>` :
             "此作業無 AI 分析"}
             </td>
-            <td>${hw.submission.submitStatus == 1 ? hw.submission.submissions[0].feedback/** TODO course 改：將 score 根據送出狀態回傳 */ : ``}</td>
-            <td>${hw.submission.submitStatus == 1 ? hw.submission.submissions[0].score : ``}</td>
+            <td>${hw.submission.submitStatus == 1 ? hw.submission.feedback/** TODO course 改：將 score 根據送出狀態回傳 */ : ``}</td>
+            <td>${hw.submission.submitStatus == 1 ? hw.submission.score : ``}</td>
         </tr>
     `).join('')}`;
     $("#homework-table tbody").append(newHome);
 }
 
 const category = {
-    addPersonalCat(hwId) {
+    showPersonalCat(catName) {
+        // TODO 團體完後，再回來改
         let modalBody = `
             <div class="mb-3">
-                <label class="form-label" for="catId">主題代碼</label>
+                <label class="form-label" for="catId">主題名稱</label>
+                <!-- TODO 編輯按鈕 -->
+                <input class="form-control mb-3" id="catId" type="text" value="${catName}">
+            </div>
+        `;
+        shareStuffModal.resetCustomFunc();
+        shareStuffModal.setData(`個人主題`, modalBody);
+        shareStuffModal.show();
+    },
+    showGroupCat(catName, catId, catMember="") {
+        let catMemberArrObj = JSON.parse(catMember);
+        catMemberArrObj.map((catMem, index) => {
+            console.log(index+1);
+            console.log(catMem);
+            console.log(catMem.studentID);
+            console.log(catMem.studentName);
+
+        });
+        let modalBody = `
+            <div class="mb-3">
+                <label class="form-label" for="catId">主題名稱</label>
+                <!-- TODO 編輯按鈕 -->
+                <input class="form-control mb-3" id="catId" type="text" value="${catName}">
+            </div>
+            <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+                <li class="nav-item me-3" role="presentation">
+                    <button class="nav-link active" id="pills-teamMem-tab" data-bs-toggle="pill" data-bs-target="#pills-teamMem" type="button" role="tab" aria-controls="pills-teamMem" aria-selected="true">組員</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="pills-inviteGroup-tab" data-bs-toggle="pill" data-bs-target="#pills-inviteGroup" type="button" role="tab" aria-controls="pills-inviteGroup" aria-selected="false" tabindex="-1">邀請</button>
+                </li>
+            </ul>
+            <div class="tab-content" id="pills-tabContent">
+                <div class="tab-pane fade show active" id="pills-teamMem" role="tabpanel" aria-labelledby="pills-teamMem-tab" tabindex="0">
+                    <table class="table">
+                        <thead>
+                            <th>#</th>
+                            <th>學號</th>
+                            <th>姓名</th>
+                        </thead>
+                        <tbody>
+                            ${catMemberArrObj.map((catMem, index) => {return`
+                                <tr>
+                                    <td>${index+1}</td>
+                                    <td>${catMem.studentID}</td>
+                                    <td>${catMem.studentName}</td>
+                                </tr>
+                            `}).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="tab-pane fade" id="pills-inviteGroup" role="tabpanel" aria-labelledby="pills-inviteGroup-tab" tabindex="0">
+                    <div class="mb-3">
+                        <label class="form-label light">加入代碼</label>
+                        <h2>${catId}</h2>
+                    </div>
+                </div>
+            </div>
+            `;
+        shareStuffModal.resetCustomFunc();
+        shareStuffModal.setData(`團體組別`, modalBody);
+        shareStuffModal.show();
+    },
+    createCat(lessonId = "", hwId = "", lessonIndex = 0) {
+        let modalBody = `
+            <div class="mb-3">
+                <label class="form-label" for="catName">主題名稱</label>
+                <input class="form-control mb-3" id="catName" type="text">
+            </div>
+        `;
+        let modalFooter = `
+            <button type="button" class="btn btn-secondary" data-bs-dismiss='modal'>取消</button>
+            <button type="button" id="createCatBtn" class="btn btn-primary">新增</button>
+        `;
+        shareStuffModal.resetCustomFunc();
+        shareStuffModal.addCustomFunction("createCat", function () {
+            let catName = $("#catName").val();
+            if (!catName) {
+                alert("請輸入主題代碼！😡");
+                return;
+            }
+            $.post("/course/createCat", {
+                lessonId,
+                hwId,
+                catName
+            })
+                .done((data) => {
+                    console.log("done");
+                    alert("新增成功！");
+                    showLessonData(lessonIndex);
+                    shareStuffModal.hide();
+                })
+                .fail((xhr, status, error) => {
+                    alert("新增失敗！");
+                    console.log(error);
+                })
+
+        });
+        shareStuffModal.setData(`新增主題`, modalBody, modalFooter);
+        $("#createCatBtn").on("click", () => { shareStuffModal.callCustomFunction("createCat"); });
+        shareStuffModal.show();
+    },
+    joinCat(hwId) {
+        let modalBody = `
+            <div class="mb-3">
+                <label class="form-label" for="catId">組別（主題）代碼</label>
                 <input class="form-control mb-3" id="catId" type="text">
             </div>
         `;
         let modalFooter = `
-            <button type="button" class="btn btn-secondary" data-bs-dismiss='shareStuffModal'>取消</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss='modal'>取消</button>
             <button type="button" id="joinCatBtn" class="btn btn-primary">加入</button>
         `;
         shareStuffModal.resetCustomFunc();
         // Set submit func
         shareStuffModal.addCustomFunction("joinCat", function () {
             let catId = $("#catId").val();
-            if(!catId) {
+            if (!catId) {
                 alert("請輸入主題代碼！😡");
                 return;
             }
-            
+
             formUtil.get("/course/joinCategory", {
-                semester : currentSemester.name,
-                lessonId : $(".lesson-list-chosen").attr("id").replace("Btn", ""),
+                semester: currentSemester.name,
+                lessonId: $(".lesson-list-chosen").attr("id").replace("Btn", ""),
                 hwId,
-                catId,
-                type: "p" // personal
+                catId
             });
         })
         shareStuffModal.setData(`加入主題`, modalBody, modalFooter);
         $("#joinCatBtn").on("click", () => { shareStuffModal.callCustomFunction("joinCat"); });
         shareStuffModal.show();
-    }
+    },
 }
 
-function showHandInHwModal(hwName = "", hw_id = "") {
+function showHandInHwModal(hwName = "", hw_id = "", catName = "", catId = "") {
     let modalBody = `
         <div class="mb-3" id="hwAddLink">
             <div class="form-label">
@@ -321,6 +450,8 @@ function showHandInHwModal(hwName = "", hw_id = "") {
         formData.append("semester", currentSemester.name);
         formData.append("name", $(".lesson-list-chosen").text());
         formData.append("hwId", hw_id);
+        formData.append("catName", catName);
+        formData.append("catId", catId);
 
         let links = [];
         $("input[name='l-link-add']").each(function () { //TODO: 存完要刪除所有同 name input
