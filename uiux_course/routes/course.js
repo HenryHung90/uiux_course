@@ -289,6 +289,7 @@ router.post("/addHw", isAuth, isTeacher, upload.any('files'), async function (re
             description,
             links,
             attribute,
+            isHandInByIndividual,
             isRegular,
             isAnalysis,
             isCatCustom,
@@ -326,6 +327,7 @@ router.post("/addHw", isAuth, isTeacher, upload.any('files'), async function (re
                     files: fileInfos,
                     links: links ? JSON.parse(links) : {},
                     attribute,
+                    isHandInByIndividual,
                     isRegular,
                     isCatCustom,
                     categories: categories ? JSON.parse(categories) : {},
@@ -462,7 +464,7 @@ router.post('/fetchHomework', isAuth, isTeacher, async function (req, res, next)
                 },
                 {
                     $group: {
-                        _id: "submissions.category.catId",
+                        _id: "$submissions.category.catId",
                         // Push same group of submission into an array
                         submissions: { $push: "$submissions" }
                     }
@@ -479,7 +481,7 @@ router.post('/fetchHomework', isAuth, isTeacher, async function (req, res, next)
 router.post("/lesson/submitGrade", isAuth, isTeacher, async (req, res, next) => {
     const { hwId, keepStatus, data } = req.body;
     let dataObj = JSON.parse(data);
-    console.log(hwId, keepStatus, typeof dataObj);
+    console.log(hwId, keepStatus, typeof dataObj, dataObj);
     try {
         // Update the submitStatus first
         await submissionModel.updateOne({ hwId }, {
@@ -489,17 +491,25 @@ router.post("/lesson/submitGrade", isAuth, isTeacher, async (req, res, next) => 
         });
 
         // Prepare bulk updates for submissions
-        const bulkOps = dataObj.map(submission => ({
-            updateOne: {
-                filter: { hwId, "submissions.studentId": submission.studentId },
-                update: {
-                    $set: {
-                        "submissions.$.feedback": submission.feedback,
-                        "submissions.$.score": submission.score
+        const bulkOps = dataObj.map(submission => {
+            const updateFields = {};
+
+            if (submission.feedback !== undefined) {
+                updateFields["submissions.$.feedback"] = submission.feedback;
+            }
+
+            if (submission.score !== undefined) {
+                updateFields["submissions.$.score"] = submission.score;
+            }
+            return {
+                updateOne: {
+                    filter: { hwId, "submissions.studentId": submission.studentId },
+                    update: {
+                        $set: updateFields
                     }
                 }
             }
-        }));
+        });
 
         // Execute all bulk operations at once
         await submissionModel.bulkWrite(bulkOps);
@@ -576,6 +586,7 @@ router.post("/fetchSemesters/stu", isAuth, async function (req, res, next) {
 });
 
 //===== Student
+// 加入學期
 router.get('/join/', isAuth, async function (req, res, next) {
     const sCode = req.query.s_code;
     try {
@@ -599,23 +610,71 @@ router.get('/join/', isAuth, async function (req, res, next) {
     }
 });
 
+/// 分組 ///
+// 新增組別（主題）
+router.post('/createCat', isAuth, async function (req, res, next) {
+    let stu = await memberModel.findOne({ email: req.session.email });
+    const { lessonId, hwId, catName } = req.body;
+    try {
+        // Find the lesson by lessonId
+        const lesson = await Lesson.findOne({ _id: lessonId });
+
+        if (!lesson) {
+            console.log("Lesson not found");
+            return res.status(404).json({ message: 'Lesson not found' });
+        }
+
+        // Find the homework (hws) by hwId
+        const hw = lesson.hws.id(hwId);
+
+        if (!hw) {
+            console.log("Homework not found");
+            return res.status(404).json({ message: 'Homework not found' });
+        }
+
+        const isStuInAnyCategory = hw.categories.some(category => {
+            category.member.some(member => member.memberId.toString() === stu._id.toString())
+        });
+
+        if (isStuInAnyCategory) {
+            console.log("Student already exists in one of the categories");
+            return res.status(400).json({ message: 'Student already exists in one of the categories' });
+        }
+
+        hw.categories.push({
+            name: catName,
+            member: [{
+                studentID: stu.studentID,
+                studentName: stu.name,
+                memberId: stu._id,
+            }
+            ]
+        });
+
+        await lesson.save();
+        return res.sendStatus(200);
+    } catch (error) {
+        console.error('新增組題（主別）錯誤 :', error);
+        res.sendStatus(500).send('新增組題（主別）錯誤');
+    }
+});
 router.get('/joinCategory', isAuth, async function (req, res, next) {
     let stu = await memberModel.findOne({ email: req.session.email });
-    const { semester, lessonId, hwId, catId, type } = req.query;
+    const { semester, lessonId, hwId, catId } = req.query;
     try {
         try {
             // check category exist
-            const lesson = await Lesson.findOne({ 
-                semester, 
-                "_id": lessonId, 
-                "hws._id": hwId, 
-                "hws.categories._id": catId 
-            });          
-            if(!lesson)  {
+            const lesson = await Lesson.findOne({
+                semester,
+                "_id": lessonId,
+                "hws._id": hwId,
+                "hws.categories._id": catId
+            });
+            if (!lesson) {
                 throw "找不到主題";
             }
         } catch (error) {
-            console.log("確認主題錯誤："+error);
+            console.log("確認主題錯誤：" + error);
             return res.redirect("/?err=找不到指定的主題 😢");
         }
 
@@ -647,7 +706,7 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
         let stu = await memberModel.findOne({ email: req.session.email });
         const files = req.files;
         let fileInfos = [];
-        const { hwId, links } = req.body;
+        const { semester, hwId, links, catName, catId } = req.body;
         // files
         if (files && files.length > 0) {
             const filePromises = files.map((file) => {
@@ -672,48 +731,108 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
             fileInfos = await Promise.all(filePromises);
         }
 
-        let newSubmissionData = {
-            studentId: stu.studentID,
-            isHandIn: true,
-            studentName: stu.name,
-            handInData: {
-                links: JSON.parse(links),
-                files: fileInfos
-            },
-            category: { name: "Category Name", catId: "cat123" }, // TODO 9/3 Start From here
-            analysis: {
-                result: []
+        // Find the lesson by id
+        const hwObj = await Lesson.findOne({ semester, 'hws._id': hwId }, { 'hws.$': 1 });
+        const hw = hwObj.hws[0];
+        if (!hw) {
+            return res.status(404).send("找不到作業");
+        }
+
+        // Group hand in
+        if (hw.attribute == 'g' && !hw.isHandInByIndividual) {
+            let category = hw.categories.id(catId);
+
+            if (!category) {
+                return res.status(404).send('Category not found');
             }
-        };
 
-        const result = await submissionModel.updateOne(
-            // TODO hwId 留一個就好 
-            { hwId: hwId, "submissions.studentId": stu.studentID }, // Query to find the specific student submission
-            {
-                $set: {
-                    // Update data if student submission exists
-                    "submissions.$.isHandIn": newSubmissionData.isHandIn,
-                    "submissions.$.handInData": newSubmissionData.handInData,
-                    "submissions.$.category": newSubmissionData.category,
-                    "submissions.$.analysis": newSubmissionData.analysis,
+            for (let member of category.member) {
+                let newSubmissionData = {
+                    studentId: member.studentID,
+                    isHandIn: true,
+                    studentName: member.studentName,
+                    handInData: {
+                        links: JSON.parse(links),
+                        files: fileInfos
+                    },
+                    category: { name: category.name, catId: category._id },
+                    analysis: {
+                        result: []
+                    }
+                };
+
+                const result = await submissionModel.updateOne(
+                    { hwId: hwId, "submissions.studentId": member.studentID }, // Query to find specific student submission
+                    {
+                        $set: {
+                            "submissions.$.isHandIn": newSubmissionData.isHandIn,
+                            "submissions.$.handInData": newSubmissionData.handInData,
+                            "submissions.$.category": newSubmissionData.category,
+                            "submissions.$.analysis": newSubmissionData.analysis,
+                        }
+                    },
+                    { upsert: false } // Do not create a new document for this operation
+                );
+
+                // If no document was updated (i.e., no existing submission for this student), push a new one
+                if (result.modifiedCount === 0) {
+                    await submissionModel.updateOne(
+                        { hwId: hwId },
+                        {
+                            $push: {
+                                submissions: newSubmissionData // Add the new submission data
+                            }
+                        },
+                        { upsert: false } // Ensure the document exists, but don't create a new one
+                    );
                 }
-            },
-            { upsert: false } // Do not create a new document for this operation
-        );
+            }
 
-        // If no document was updated (i.e., no existing submission for this student), push a new one
-        if (result.modifiedCount === 0) {
-            await submissionModel.updateOne(
-                { hwId: hwId },
+            res.sendStatus(200);
+        } else {
+            let newSubmissionData = {
+                studentId: stu.studentID,
+                isHandIn: true,
+                studentName: stu.name,
+                handInData: {
+                    links: JSON.parse(links),
+                    files: fileInfos
+                },
+                category: { name: catName, catId },
+                analysis: {
+                    result: []
+                }
+            };
+
+            const result = await submissionModel.updateOne(
+                // TODO hwId 留一個就好 
+                { hwId: hwId, "submissions.studentId": stu.studentID }, // Query to find the specific student submission
                 {
-                    $push: {
-                        submissions: newSubmissionData // Add the new submission data
+                    $set: {
+                        // Update data if student submission exists
+                        "submissions.$.isHandIn": newSubmissionData.isHandIn,
+                        "submissions.$.handInData": newSubmissionData.handInData,
+                        "submissions.$.category": newSubmissionData.category,
+                        "submissions.$.analysis": newSubmissionData.analysis,
                     }
                 },
-                { upsert: false } // Ensure the document exists, but don't create a new one
+                { upsert: false } // Do not create a new document for this operation
             );
+
+            // If no document was updated (i.e., no existing submission for this student), push a new one
+            if (result.modifiedCount === 0) {
+                await submissionModel.updateOne(
+                    { hwId: hwId },
+                    {
+                        $push: {
+                            submissions: newSubmissionData // Add the new submission data
+                        }
+                    },
+                    { upsert: false } // Ensure the document exists, but don't create a new one
+                );
+            }
+            res.send(200);
         }
-        res.send(200);
     } catch (error) {
         console.log("Homework submit error: ", error);
         res.sendStatus(500);
@@ -727,13 +846,19 @@ router.post("/lesson/getPersonalSubmissions", isAuth, async (req, res, next) => 
         let submissions = await submissionModel.find({
             "submissions.studentId": student.studentID
         });
-        const personalSubmissions = submissions.map(doc => {
-            return {
-                ...doc.toObject(),
-                // TODO 將 score 根據送出狀態回傳
-                submissions: doc.submissions.filter(sub => sub.studentId === student.studentID)
-            };
-        });
+        const personalSubmissions = {
+            studentId: student.studentID,
+            // TODO 將 score 根據送出狀態回傳
+            submissions: submissions.flatMap(doc =>
+                doc.submissions
+                    .filter(sub => sub.studentId === student.studentID)
+                    .map(sub => ({
+                        ...sub.toObject(),  // 將 submission 轉為對象
+                        hwId: doc.hwId,      // 將 hwId 加入每個 submission 中
+                        submitStatus: doc.submitStatus
+                    }))
+            )
+        };
         res.send(JSON.stringify(personalSubmissions));
     } catch (error) {
         console.error(error);
@@ -787,23 +912,6 @@ router.post("/aiAnalyze", async (req, res) => {
 
 //==== Common
 // Route to display an individual file based on its ID
-router.get('/:lessonId/:fileId', async (req, res) => {
-    try {
-        const { lessonId, fileId } = req.params;
-        const lesson = await Lesson.findById(lessonId);
-        if (!lesson) {
-            return res.status(404).send('Lesson not found');
-        }
-        const file = lesson.files.id(fileId);
-        if (!file) {
-            return res.status(404).send('File not found');
-        }
-        res.sendFile(path.resolve(file.path));
-    } catch (error) {
-        console.error(error);
-        res.status(500).send('Error retrieving the file from the database.');
-    }
-});
 router.get('/getHw/:hwId/:fileId', async (req, res) => {
     try {
         const { hwId, fileId } = req.params;
@@ -827,6 +935,48 @@ router.get('/getHw/:hwId/:fileId', async (req, res) => {
             return res.status(404).send('File not found');
         }
         res.sendFile(path.resolve(fileFound.path));
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error retrieving the file from the database.');
+    }
+});
+router.get('/:lessonId/:fileId', async (req, res) => {
+    try {
+        const { lessonId, fileId } = req.params;
+        const lesson = await Lesson.findById(lessonId);
+        if (!lesson) {
+            return res.status(404).send('Lesson not found');
+        }
+        const file = lesson.files.id(fileId);
+        if (!file) {
+            return res.status(404).send('File not found');
+        }
+        res.sendFile(path.resolve(file.path));
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error retrieving the file from the database.');
+    }
+});
+// Hw ref file
+router.get('/:lessonId/:hwId/:fileId', async (req, res) => {
+    try {
+        const { lessonId, hwId, fileId } = req.params;
+        const lesson = await Lesson.findById(lessonId);
+        if (!lesson) {
+            console.log("Lesson not found");
+            return res.status(404).send('Lesson not found');
+        }
+        const hw = lesson.hws.id(hwId);
+        if (!hw) {
+            console.log("Homework not found");
+            return res.status(404).send('Homework not found');
+        }
+        let file = hw.files.id(fileId);
+        if (!file) {
+            console.log("File not found");
+            return res.status(404).send('File not found');
+        }
+        res.sendFile(path.resolve(file.path));
     } catch (error) {
         console.error(error);
         res.status(500).send('Error retrieving the file from the database.');
