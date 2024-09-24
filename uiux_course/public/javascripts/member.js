@@ -145,8 +145,7 @@ async function showLessonData(lessonIndex) {
         // 已繳交作業
         let lessonSub = submissions.find((ele) =>
             ele.hwId.toString() == lesson.hws[i]._id.toString());
-        let isStudentInCategory = false;
-        isStudentInCategory = lesson.hws[i].categories.some(category =>
+        const categoryWithStudent = lesson.hws[i].categories.find(category =>
             category.member.some(member => member.studentID === studentId)
         );
 
@@ -166,11 +165,11 @@ async function showLessonData(lessonIndex) {
             }
         };
         // For indicate and save cat while upload hw
-        lesson.hws[i].submission.category = isStudentInCategory ?
+        lesson.hws[i].submission.category = categoryWithStudent ?
             {
-                name: lesson.hws[i].categories[0].name,
-                catId: lesson.hws[i].categories[0]._id,
-                member: lesson.hws[i].categories[0].member
+                name: categoryWithStudent.name,
+                catId: categoryWithStudent._id,
+                member: categoryWithStudent.member
             } : {
                 name: '',
                 catId: '',
