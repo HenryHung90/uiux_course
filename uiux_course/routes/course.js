@@ -144,6 +144,25 @@ router.post('/addLesson', isAuth, isTeacher, upload.any('files'), async function
     }
 });
 
+router.post("/updateLessonName", isAuth, isTeacher, async function(req, res, next) {
+    const {lessonId, title} = req.body;
+    try{
+        await Lesson.updateOne({_id: lessonId}, {
+            $set: {name: title}
+        });
+
+        const updatedLesson = await Lesson.findById(lessonId);
+        if(updatedLesson) {
+            res.send(JSON.stringify({"savedTitle" : updatedLesson.name}));
+        } else {
+            throw error(`更新後找不到 Lesson, Id: ${lessonId}`);
+        }
+    } catch(error) {
+        console.error("更新單元名稱失敗： "+error);
+        res.sendStatus(500);
+    }
+})
+
 router.post("/deleteLesson", isAuth, isTeacher, async function (req, res, next) {
     const { lessonId } = req.body;
     let errStr = "";

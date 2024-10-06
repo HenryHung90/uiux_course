@@ -272,10 +272,10 @@ function addHomework() {
 
         // attribute
         formData.append("attribute", $("#hwAttr").val());
-        
+
         // isAnalysis
         formData.append("isAnalysis", $("#isAnalysis").prop("checked") ? true : false);
-        
+
         // isHandInByIndividual
         formData.append("isHandInByIndividual", $("#isHandInByIndividual").prop("checked") ? true : false);
 
@@ -552,7 +552,7 @@ function showAiAnalysisModal() {
     // $.post("/course/lesson/get");
 
     let bsModal = bootstrap.Modal.getInstance($("#aiAnalysisModal"));
-    if(!bsModal){bsModal = new bootstrap.Modal($("#aiAnalysisModal"))}
+    if (!bsModal) { bsModal = new bootstrap.Modal($("#aiAnalysisModal")) }
     bsModal.show();
 }
 
@@ -560,9 +560,9 @@ function showAiAnalysisModal() {
  * 
  * @param {*} status 0=keep grade, 1=submit grade
  */
-function submitGrade(status=0) {
-    if(status==1) {
-        if(!confirm("確認送出？\n送出後不能再修改，且學生會看到成績與評語！")){
+function submitGrade(status = 0) {
+    if (status == 1) {
+        if (!confirm("確認送出？\n送出後不能再修改，且學生會看到成績與評語！")) {
             return;
         }
     }
@@ -575,18 +575,18 @@ function submitGrade(status=0) {
         score: ""
     };
 
-    submissions.each(function() {
+    submissions.each(function () {
         let row = $(this);
-        if(row.find('td[name="studentId"]').text().trim() || 
-            row.find('textarea[name="feedback"]').val() || 
+        if (row.find('td[name="studentId"]').text().trim() ||
+            row.find('textarea[name="feedback"]').val() ||
             row.find('td[name="score"] input').val()
         ) {
-            if(row.find('td').eq(0).attr('id').trim() != lastCat) {
+            if (row.find('td').eq(0).attr('id').trim() != lastCat) {
                 lastData.feedback = row.find('textarea[name="feedback"]').val() || "";
             }
             data.push({
                 studentId: row.find('td[name="studentId"]').text().trim() || "",
-                feedback: lastData.feedback, 
+                feedback: lastData.feedback,
                 score: row.find('input[name="score"]').val() || ""
             });
             lastCat = row.find('td').eq(0).attr('id').trim();
@@ -598,7 +598,7 @@ function submitGrade(status=0) {
         data: JSON.stringify(data)
     })
         .done((data) => {
-            alert(`成績${status==0?'暫存成功！':'送出成功！'}`);
+            alert(`成績${status == 0 ? '暫存成功！' : '送出成功！'}`);
         })
         .fail((xhr, status, error) => {
             alert("儲存失敗！");
@@ -614,7 +614,14 @@ function fetchLessons() {
             for (let i = 0; i < lessons.length; i++) {
                 let lesson = lessons[i];
                 let newLesson =
-                    `<button class="btn w-100 text-start p-2 border-bottom border-1 border-light-subtitle lesson-list" type="button" id="${lesson._id}Btn" onclick="showLessonData('${i}')">${lesson.name}</button>`;
+                    `
+                        <div class="d-flex">
+                            <input class="btn w-100 text-start p-2 border-bottom border-1 border-light-subtitle lesson-list" type="text" id="${lesson._id}Btn" value="${lesson.name}" onclick="showLessonData('${i}')" readonly></input>
+                            <button class="btn p-0" onclick="editLessonName('${lesson._id}')" id="${lesson._id}editLessonNameBtn"><img src="/images/edit.svg"></img></button>
+                            <button class="btn p-0 d-none" onclick="saveEditedLessonName('${lesson._id}')" id="${lesson._id}saveEditedLessonNameBtn"><img src="/images/check.svg"></img></button>
+                            <button class="btn p-0 d-none" onclick="cancelEditedLessonName('${lesson._id}')" id="${lesson._id}cancelEditedLessonNameBtn"><img src="/images/x.svg"></img></button>
+                        </div>
+                    `;
                 // let newLesson = // TODO: id duplicate
                 // `<tr>
                 //     <th scope="row">${i+1}</th>
@@ -651,6 +658,46 @@ function fetchLessons() {
             alert("更新課程單元失敗");
             console.log("更新課程單元失敗： ", error);
         })
+}
+
+function editLessonName(lessonId) {
+    let input = $(`#${lessonId}Btn`)
+        .prop('readonly', false);
+    input[0].focus();
+
+    $(`#${lessonId}saveEditedLessonNameBtn`).removeClass("d-none");
+    $(`#${lessonId}cancelEditedLessonNameBtn`).removeClass("d-none");
+    $(`#${lessonId}editLessonNameBtn`).addClass("d-none");
+}
+
+function saveEditedLessonName(lessonId) {
+    let input = $(`#${lessonId}Btn`);
+    $.post("/course/updateLessonName", { lessonId, title: input.val() })
+        .done((data) => {
+            input
+                .val(JSON.parse(data).savedTitle)
+                .prop('readonly', true);
+            input[0].blur();
+
+            $(`#${lessonId}saveEditedLessonNameBtn`).addClass("d-none");
+            $(`#${lessonId}cancelEditedLessonNameBtn`).addClass("d-none");
+            $(`#${lessonId}editLessonNameBtn`).removeClass("d-none");
+
+            alert("單元名稱更新成功！👍🏻");
+        })
+        .fail((xhr, status, error) => {
+            alert("單元名稱更新失敗！👎🏻");
+        });
+}
+
+function cancelEditedLessonName(lessonId) {
+    let input = $(`#${lessonId}Btn`)
+        .prop('readonly', true);
+    input[0].blur();
+
+    $(`#${lessonId}saveEditedLessonNameBtn`).addClass("d-none");
+    $(`#${lessonId}cancelEditedLessonNameBtn`).addClass("d-none");
+    $(`#${lessonId}editLessonNameBtn`).removeClass("d-none");
 }
 
 function showLessonData(lessonIndex) {
