@@ -700,6 +700,48 @@ function cancelEditedLessonName(lessonId) {
     $(`#${lessonId}editLessonNameBtn`).removeClass("d-none");
 }
 
+function editMatName(matId) {
+    $(`#${matId}link`).hide();
+
+    $(`#${matId}matNameInput`).removeClass("d-none");
+    $(`#${matId}saveEditedMatNameBtn`).removeClass("d-none");
+    $(`#${matId}cancelEditedLessonNameBtn`).removeClass("d-none");
+    $(`#${matId}editMatNameBtn`).addClass("d-none");
+}
+function saveEditedMatName(lessonId, matId) {
+    let link = $(`#${matId}link`);
+    
+    $(`#${matId}matNameInput`).addClass("d-none");
+    $(`#${matId}saveEditedMatNameBtn`).addClass("d-none");
+    $(`#${matId}cancelEditedLessonNameBtn`).addClass("d-none");
+    $(`#${matId}editMatNameBtn`).removeClass("d-none");
+
+    $.post("/course/updateMatName", { lessonId, matId, title: $(`#${matId}matNameInput`).val() })
+        .done((data) => {
+            link.text(JSON.parse(data).savedTitle);
+
+            $(`#${matId}matNameInput`).addClass("d-none");
+            $(`#${matId}saveEditedMatNameBtn`).addClass("d-none");
+            $(`#${matId}cancelEditedLessonNameBtn`).addClass("d-none");
+            $(`#${matId}editMatNameBtn`).removeClass("d-none");
+
+            link.show();
+
+            alert("教材名稱更新成功！👍🏻");
+        })
+        .fail((xhr, status, error) => {
+            alert("教材名稱更新失敗！👎🏻");
+        });
+}
+function cancelEditedMatName(matId) {
+    let link = $(`#${matId}link`).show();
+
+    $(`#${matId}matNameInput`).addClass("d-none");
+    $(`#${matId}saveEditedMatNameBtn`).addClass("d-none");
+    $(`#${matId}cancelEditedLessonNameBtn`).addClass("d-none");
+    $(`#${matId}editMatNameBtn`).removeClass("d-none");
+}
+
 function showLessonData(lessonIndex) {
     let lesson = lessons[lessonIndex];
     $(".lesson-list-chosen").removeClass("lesson-list-chosen");
@@ -753,7 +795,15 @@ function showLessonData(lessonIndex) {
             ${lesson.files.map(file => `
                 <li>
                     <button class="btn btn-outline-danger m-1" onclick="deleteMat('${lesson._id}', '${file._id}', true)">-</button>
-                    <a href="course/${lesson._id}/${file._id}" target="_blank">${file.name}</a>
+                    <a href="course/${lesson._id}/${file._id}" id="${file._id}link" target="_blank">${file.name}</a>
+                    <div class="d-inline-block">
+                        <div class="input-group">
+                            <input class="form-control d-none" id="${file._id}matNameInput" type="text" value="${file.name}">
+                            <button type="button" class="btn btn-outline-secondary p-0 d-none" onclick="saveEditedMatName('${lesson._id}', '${file._id}')" id="${file._id}saveEditedMatNameBtn"><img src="/images/check.svg"></button>
+                            <button type="button" class="btn btn-outline-secondary p-0 d-none" onclick="cancelEditedMatName('${file._id}')" id="${file._id}cancelEditedLessonNameBtn"><img src="/images/x.svg"></button>
+                        </div>
+                    </div>
+                    <button class="btn" id="${file._id}editMatNameBtn" onclick="editMatName('${file._id}')"><img src="/images/edit.svg"></button>
                 </li>
             `).join('')}
         </ul>
