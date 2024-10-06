@@ -617,9 +617,9 @@ function fetchLessons() {
                     `
                         <div class="d-flex">
                             <input class="btn w-100 text-start p-2 border-bottom border-1 border-light-subtitle lesson-list" type="text" id="${lesson._id}Btn" value="${lesson.name}" onclick="showLessonData('${i}')" readonly></input>
-                            <button class="btn p-0" onclick="editLessonName('${lesson._id}')" id="${lesson._id}editLessonNameBtn"><img src="/images/edit.svg"></img></button>
-                            <button class="btn p-0 d-none" onclick="saveEditedLessonName('${lesson._id}')" id="${lesson._id}saveEditedLessonNameBtn"><img src="/images/check.svg"></img></button>
-                            <button class="btn p-0 d-none" onclick="cancelEditedLessonName('${lesson._id}')" id="${lesson._id}cancelEditedLessonNameBtn"><img src="/images/x.svg"></img></button>
+                            <button type="button" class="btn p-0" onclick="editLessonName('${lesson._id}')" id="${lesson._id}editLessonNameBtn"><img src="/images/edit.svg"></img></button>
+                            <button type="button" class="btn p-0 d-none" onclick="saveEditedLessonName('${lesson._id}')" id="${lesson._id}saveEditedLessonNameBtn"><img src="/images/check.svg"></img></button>
+                            <button type="button" class="btn p-0 d-none" onclick="cancelEditedLessonName('${lesson._id}')" id="${lesson._id}cancelEditedLessonNameBtn"><img src="/images/x.svg"></img></button>
                         </div>
                     `;
                 // let newLesson = // TODO: id duplicate
