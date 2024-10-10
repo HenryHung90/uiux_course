@@ -144,6 +144,49 @@ router.post('/addLesson', isAuth, isTeacher, upload.any('files'), async function
     }
 });
 
+router.post("/updateLessonName", isAuth, isTeacher, async function (req, res, next) {
+    const { lessonId, title } = req.body;
+    try {
+        await Lesson.updateOne({ _id: lessonId }, {
+            $set: { name: title }
+        });
+
+        const updatedLesson = await Lesson.findById(lessonId);
+        if (updatedLesson) {
+            res.send(JSON.stringify({ "savedTitle": updatedLesson.name }));
+        } else {
+            throw error(`更新後找不到 Lesson, Id: ${lessonId}`);
+        }
+    } catch (error) {
+        console.error("更新單元名稱失敗： " + error);
+        res.sendStatus(500);
+    }
+})
+
+router.post("/updateMatName", isAuth, isTeacher, async function (req, res, next) {
+    const { lessonId, matId, title } = req.body;
+    try {
+        await Lesson.updateOne({ _id: lessonId, 'files._id': matId }, {
+            $set: { 'files.$.name': title }
+        });
+
+        const updatedLesson = await Lesson.findById(lessonId, 'files'); // 用欄位投影，只回傳 file 欄位
+        if (updatedLesson) {
+            const updatedFile = updatedLesson.files.find(file => file._id.toString() === matId);
+            if (updatedFile) {
+                res.send(JSON.stringify({ "savedTitle": updatedFile.name }));
+            } else {
+                throw error(`更新後找不到 file, Id: ${matId}`);
+            }
+        } else {
+            throw error(`更新後找不到 Lesson, Id: ${lessonId}`);
+        }
+    } catch (error) {
+        console.error("更新單元名稱失敗： " + error);
+        res.sendStatus(500);
+    }
+})
+
 router.post("/deleteLesson", isAuth, isTeacher, async function (req, res, next) {
     const { lessonId } = req.body;
     let errStr = "";
