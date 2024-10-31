@@ -70,7 +70,8 @@ function addLesson() {
                 }
             },
             error: function (xhr, status, error) {
-                console.error("Error:", error);
+                console.log(`新增單元失敗！：${xhr.responseText}`);
+                alert(`新增單元失敗！\n\n錯誤訊息：${xhr.responseText}`);
             }
         });
     }
@@ -168,8 +169,8 @@ function addMat() {
             }
         },
         error: function (xhr, status, error) {
-            alert("新增失敗！");
-            console.error("Error:", error);
+            console.log(`新增教材失敗！：${xhr.responseText}`);
+            alert(`新增教材失敗！\n\n錯誤訊息：${xhr.responseText}`);
         }
     });
 }
@@ -188,8 +189,8 @@ function deleteMat(lesson_id, mat_id, isFile) {
                 alert("教材刪除成功！");
             })
             .fail((xhr, status, error) => {
-                console.log("教材刪除失敗： " + error);
-                alert("教材刪除失敗");
+                console.log(`教材刪除失敗：${xhr.responseText}`);
+                alert(`教材刪除失敗\n\n錯誤訊息：${xhr.responseText}`);
             })
     }
 }
@@ -303,7 +304,8 @@ function addHomework() {
                 showLessonData($(".lesson-list").index(".lesson-list-chosen"));
             },
             error: function (jqXHR/* XMLHttpRequest */, textStatus, errorThrown) {
-                alert("新增失敗");
+                console.log(`作業新增失敗：${jqXHR.responseText}`);
+                alert(`作業新增失敗\n\n錯誤訊息：${jqXJR.responseText}`);
                 showLessonData($(".lesson-list").index(".lesson-list-chosen"));
             }
         })
@@ -321,7 +323,8 @@ function removeHomework(lesson_id, hw_id) {
                 alert("刪除成功！");
             })
             .fail((jqXHR, textStatus, errorThrown) => {
-                alert("刪除失敗！");
+                console.log(`作業刪除失敗：${jqXHR.responseText}`);
+                alert(`作業刪除失敗\n\n錯誤訊息：${jqXHR.responseText}`);
             })
         let originHwList = $("#l-homeworks tbody tr");
         originHwList.each(function () {
@@ -543,8 +546,8 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
             console.log(data);
         })
         .fail((xhr, status, error) => {
-            alert("更新繳交作業失敗");
-            console.log("更新繳交作業失敗： " + error);
+            console.log(`更新繳交作業失敗：${xhr.responseText}`);
+            alert(`更新繳交作業失敗\n\n錯誤訊息：${xhr.responseText}`);
         })
 }
 
@@ -601,8 +604,8 @@ function submitGrade(status = 0) {
             alert(`成績${status == 0 ? '暫存成功！' : '送出成功！'}`);
         })
         .fail((xhr, status, error) => {
-            alert("儲存失敗！");
-            console.log("儲存失敗： ", error);
+            console.log(`儲存失敗：${xhr.responseText}`);
+            alert(`儲存失敗\n\n錯誤訊息：${xhr.responseText}`);
         })
 }
 
@@ -655,8 +658,8 @@ function fetchLessons() {
             }
         })
         .fail((xhr, status, error) => {
-            alert("更新課程單元失敗");
-            console.log("更新課程單元失敗： ", error);
+            console.log(`更新課程單元失敗：${xhr.responseText}`);
+            alert(`更新課程單元失敗\n\n錯誤訊息：${xhr.responseText}`);
         })
 }
 
@@ -686,7 +689,8 @@ function saveEditedLessonName(lessonId) {
             alert("單元名稱更新成功！👍🏻");
         })
         .fail((xhr, status, error) => {
-            alert("單元名稱更新失敗！👎🏻");
+            console.log(`單元名稱更新失敗！👎🏻：${xhr.responseText}`);
+            alert(`單元名稱更新失敗！👎🏻\n\n錯誤訊息：${xhr.responseText}`);
         });
 }
 
@@ -710,7 +714,7 @@ function editMatName(matId) {
 }
 function saveEditedMatName(lessonId, matId) {
     let link = $(`#${matId}link`);
-    
+
     $(`#${matId}matNameInput`).addClass("d-none");
     $(`#${matId}saveEditedMatNameBtn`).addClass("d-none");
     $(`#${matId}cancelEditedLessonNameBtn`).addClass("d-none");
@@ -730,7 +734,8 @@ function saveEditedMatName(lessonId, matId) {
             alert("教材名稱更新成功！👍🏻");
         })
         .fail((xhr, status, error) => {
-            alert("教材名稱更新失敗！👎🏻");
+            console.log(`教材名稱更新失敗！👎🏻：${xhr.responseText}`);
+            alert(`教材名稱更新失敗！👎🏻\n\n錯誤訊息：${xhr.responseText}`);
         });
 }
 function cancelEditedMatName(matId) {
@@ -909,8 +914,8 @@ function addSemester() {
                 updateSemesters();
             })
             .fail((xhr, status, error) => {
-                alert("新增學期失敗");
-                console.log("新增學期失敗： ", error);
+                console.log(`新增學期失敗：${xhr.responseText}`);
+                alert(`新增學期失敗\n\n錯誤訊息：${xhr.responseText}`);
             })
     }
 }
@@ -927,7 +932,8 @@ function updateSemesters() {
             updateSemesterFields(semesters[0]);
         })
         .fail((xhr, status, error) => {
-            console.log("更新學期失敗： ", error);
+            console.log(`更新學期失敗：${xhr.responseText}`);
+            alert(`更新學期失敗\n\n錯誤訊息：${xhr.responseText}`);
         })
 }
 
@@ -968,8 +974,8 @@ function deleteLesson(lesson) {
                 fetchLessons();
             })
             .fail((xhr, status, error) => {
-                console.log(`${xhr.responseText} ${error}`)
-                alert(`${xhr.responseText}`);
+                console.log(`刪除單元失敗！：${xhr.responseText}`);
+                alert(`刪除單元失敗！\n\n錯誤訊息：${xhr.responseText}`);
                 fetchLessons();
             })
     }
