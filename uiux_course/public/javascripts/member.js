@@ -93,7 +93,8 @@ function updateSemesters() {
             }
         })
         .fail((xhr, status, error) => {
-            console.log("更新學期失敗： ", error);
+            console.log(`更新學期失敗：${xhr.responseText}`);
+            alert(`更新學期失敗\n\n錯誤訊息：${xhr.responseText}`);
         })
 }
 
@@ -108,8 +109,8 @@ async function fetchLessons() {
             lessons = JSON.parse(data);
         })
         .fail((xhr, status, error) => {
-            alert("更新課程單元失敗");
-            console.log("更新課程單元失敗： ", error);
+            console.log(`更新課程單元失敗：${xhr.responseText}`);
+            alert(`更新課程單元失敗\n\n錯誤訊息：${xhr.responseText}`);
         })
 }
 
@@ -129,8 +130,8 @@ async function fetchPersonalSubmission() {
         let rtnList = JSON.parse(data);
         return rtnList;
     } catch (error) {
-        alert("取得繳交作業失敗");
-        console.error("取得繳交作業失敗：", error);
+        console.log(`取得繳交作業失敗：${xhr.responseText}`);
+        alert(`取得繳交作業失敗\n\n錯誤訊息：${xhr.responseText}`);
         return []; // return an empty array if there's an error
     }
 }
@@ -145,7 +146,7 @@ async function showLessonData(lessonIndex) {
         // 已繳交作業
         let lessonSub;
         let categoryWithStudent;
-        if(submissions) {
+        if (submissions) {
             lessonSub = submissions.find((ele) =>
                 ele.hwId.toString() == lesson.hws[i]._id.toString());
             categoryWithStudent = lesson.hws[i].categories.find(category =>
@@ -307,10 +308,10 @@ const category = {
         shareStuffModal.setData(`個人主題`, modalBody);
         shareStuffModal.show();
     },
-    showGroupCat(catName, catId, catMember="") {
+    showGroupCat(catName, catId, catMember = "") {
         let catMemberArrObj = JSON.parse(catMember);
         catMemberArrObj.map((catMem, index) => {
-            console.log(index+1);
+            console.log(index + 1);
             console.log(catMem);
             console.log(catMem.studentID);
             console.log(catMem.studentName);
@@ -339,9 +340,10 @@ const category = {
                             <th>姓名</th>
                         </thead>
                         <tbody>
-                            ${catMemberArrObj.map((catMem, index) => {return`
+                            ${catMemberArrObj.map((catMem, index) => {
+            return `
                                 <tr>
-                                    <td>${index+1}</td>
+                                    <td>${index + 1}</td>
                                     <td>${catMem.studentID}</td>
                                     <td>${catMem.studentName}</td>
                                 </tr>
@@ -391,8 +393,8 @@ const category = {
                     shareStuffModal.hide();
                 })
                 .fail((xhr, status, error) => {
-                    alert("新增失敗！");
-                    console.log(error);
+                    console.log(`新增失敗！：${xhr.responseText}`);
+                    alert(`新增失敗！\n\n錯誤訊息：${xhr.responseText}`);
                 })
 
         });
@@ -480,7 +482,8 @@ function showHandInHwModal(hwName = "", hw_id = "", catName = "", catId = "") {
                 alert("提交成功！🤟🏻");
             },
             error: function (jqXHR, textStatus, errorThrown) {
-                alert("提交失敗，請再試一次！💩");
+                console.log(`作業提交失敗：${jqXHR.responseText}`);
+                alert(`提交失敗，請再試一次！💩\n\n錯誤訊息：${jqXHR.responseText}`);
             }
         })
     });
@@ -495,8 +498,8 @@ function analyzeHw(hwId, submissionId) {
             console.log(data);
         })
         .fail((xhr, status, error) => {
-            alert("AI 分析失敗");
-            console.log("AI 分析失敗", error);
+            console.log(`AI 分析失敗：${xhr.responseText}`);
+            alert(`AI 分析失敗\n\n錯誤訊息：${xhr.responseText}`);
         })
 }
 
