@@ -13,6 +13,7 @@ const sharp = require('sharp');
 const OpenAI = require('openai');
 const { title } = require('process');
 const { error } = require('console');
+let now;
 
 const openai = new OpenAI({ apiKey: process.env.GPT_API_KEY });
 async function gptReq(imgArray = [], prompt = '') {
@@ -194,7 +195,9 @@ router.post("/deleteLesson", isAuth, isTeacher, async function (req, res, next) 
         // Find the lesson by id
         const lesson = await Lesson.findById(lessonId);
         if (!lesson) {
-            return res.status(404).send("單元找不到");
+            now = Date.now();
+            console.log(`單元找不到 ${now}`);
+            return res.status(404).send("單元找不到\n" + now);
         }
 
         // Delete file from disk storage
@@ -407,7 +410,9 @@ router.post("/rmHw", isAuth, isTeacher, async function (req, res, next) {
         const hwObj = await Lesson.findOne({ _id: lessonId, 'hws._id': homeworkId }, { 'hws.$': 1 }); // .$ 符合的文，1 返回，0 不返回
         const hw = hwObj.hws[0];
         if (!hw) {
-            return res.status(404).send("作業找不到");
+            now = Date.now();
+            console.log("作業找不到 " + now);
+            return res.status(404).send("作業找不到\n" + now);
         }
 
         // File
@@ -570,7 +575,9 @@ router.post('/lesson/getGroupList', isAuth, isTeacher, async (req, res, next) =>
         const hwObj = await Lesson.findOne({ _id: lesson_id, 'hws._id': hw_id }, { 'hws.$': 1 });
         const hw = hwObj.hws[0];
         if (!hw) {
-            return res.status(404).send("作業找不到");
+            now = Date.now();
+            console.log("作業找不到 " + now)
+            return res.status(404).send("作業找不到\n" + now);
         }
         let rtnMap = {};
         rtnMap.title = hw.name;
@@ -663,16 +670,18 @@ router.post('/createCat', isAuth, async function (req, res, next) {
         const lesson = await Lesson.findOne({ _id: lessonId });
 
         if (!lesson) {
-            console.log("Lesson not found");
-            return res.status(404).json({ message: 'Lesson not found' });
+            now = Date.now();
+            console.log("Lesson not found " + now);
+            return res.status(404).send('Lesson not found\n' + now);
         }
 
         // Find the homework (hws) by hwId
         const hw = lesson.hws.id(hwId);
 
         if (!hw) {
-            console.log("Homework not found");
-            return res.status(404).json({ message: 'Homework not found' });
+            now = Date.now();
+            console.log("Homework not found " + now);
+            return res.status(404).send('Homework not found\n' + now);
         }
 
         const isStuInAnyCategory = hw.categories.some(category => {
@@ -680,8 +689,9 @@ router.post('/createCat', isAuth, async function (req, res, next) {
         });
 
         if (isStuInAnyCategory) {
-            console.log("Student already exists in one of the categories");
-            return res.status(400).json({ message: 'Student already exists in one of the categories' });
+            now = Date.now();
+            console.log("Student already exists in one of the categories " + now);
+            return res.status(400).send('Student already exists in one of the categories\n' + now);
         }
 
         hw.categories.push({
@@ -778,7 +788,9 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
         const hwObj = await Lesson.findOne({ semester, 'hws._id': hwId }, { 'hws.$': 1 });
         const hw = hwObj.hws[0];
         if (!hw) {
-            return res.status(404).send("找不到作業");
+            now = Date.now();
+            console.log("找不到作業 " + now);
+            return res.status(404).send("找不到作業\n" + now);
         }
 
         // Group hand in
@@ -786,7 +798,9 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
             let category = hw.categories.id(catId);
 
             if (!category) {
-                return res.status(404).send('Category not found');
+                now = Date.now();
+                console.log('找不到組別 ' + now);
+                return res.status(404).send('找不到組別\n' + now);
             }
 
             for (let member of category.member) {
@@ -960,7 +974,9 @@ router.get('/getHw/:hwId/:fileId', async (req, res) => {
         const { hwId, fileId } = req.params;
         const submission = await submissionModel.findOne({ hwId: hwId });
         if (!submission) {
-            return res.status(404).send('Submission not found');
+            now = Date.now();
+            console.log(`Submission not found ` + now);
+            return res.status(404).send('Submission not found\n' + now);
         }
 
         let fileFound = null;
@@ -975,12 +991,15 @@ router.get('/getHw/:hwId/:fileId', async (req, res) => {
         });
 
         if (!fileFound) {
-            return res.status(404).send('File not found');
+            now = Date.now();
+            console.log('File not found ' + now);
+            return res.status(404).send('File not found\n' + now);
         }
         res.sendFile(path.resolve(fileFound.path));
     } catch (error) {
-        console.error(error);
-        res.status(500).send('Error retrieving the file from the database.');
+        now = Date.now();
+        console.error(`Error retrieving the file from the database. ${error} ${now}`);
+        res.status(500).send('Error retrieving the file from the database.\n' + now);
     }
 });
 router.get('/:lessonId/:fileId', async (req, res) => {
@@ -988,11 +1007,14 @@ router.get('/:lessonId/:fileId', async (req, res) => {
         const { lessonId, fileId } = req.params;
         const lesson = await Lesson.findById(lessonId);
         if (!lesson) {
-            return res.status(404).send('Lesson not found');
+            now = Date.now();
+            console.log('Lesson not found ' + now);
+            return res.status(404).send('Lesson not found\n' + now);
         }
         const file = lesson.files.id(fileId);
         if (!file) {
-            return res.status(404).send('File not found');
+            now = Date.now();
+            return res.status(404).send('File not found\n' + now);
         }
         res.sendFile(path.resolve(file.path));
     } catch (error) {
@@ -1006,23 +1028,27 @@ router.get('/:lessonId/:hwId/:fileId', async (req, res) => {
         const { lessonId, hwId, fileId } = req.params;
         const lesson = await Lesson.findById(lessonId);
         if (!lesson) {
-            console.log("Lesson not found");
-            return res.status(404).send('Lesson not found');
+            now = Date.now();
+            console.log("Lesson not found " + now);
+            return res.status(404).send('Lesson not found\n' + now);
         }
         const hw = lesson.hws.id(hwId);
         if (!hw) {
-            console.log("Homework not found");
-            return res.status(404).send('Homework not found');
+            now = Date.now();
+            console.log("Homework not found "+now);
+            return res.status(404).send('Homework not found\n' + now);
         }
         let file = hw.files.id(fileId);
         if (!file) {
-            console.log("File not found");
-            return res.status(404).send('File not found');
+            now = Date.now();
+            console.log("File not found "+now);
+            return res.status(404).send('File not found\n' + now);
         }
         res.sendFile(path.resolve(file.path));
     } catch (error) {
-        console.error(error);
-        res.status(500).send('Error retrieving the file from the database.');
+        now = Date.now();
+        console.error(`Error retrieving the file from the database. ${error} ${now}`);
+        res.status(500).send('Error retrieving the file from the database.\n' + now);
     }
 });
 
