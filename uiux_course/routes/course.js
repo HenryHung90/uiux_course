@@ -521,8 +521,9 @@ router.post('/fetchHomework', isAuth, isTeacher, async function (req, res, next)
         }
         res.send(JSON.stringify(updateSubmissions));
     } catch (error) {
-        console.log(error);
-        res.sendStatus(500).send('Error fetching hand ins.');
+        now = Date.now();
+        console.log("Error fetching hand ins. " + error + now);
+        return res.status(500).send('Error fetching hand ins.\n' + now);
     }
 });
 
@@ -564,8 +565,9 @@ router.post("/lesson/submitGrade", isAuth, isTeacher, async (req, res, next) => 
 
         res.sendStatus(200);
     } catch (error) {
-        console.log("submitGrade error: ", error);
-        res.sendStatus(500);
+        now = Date.now();
+        console.log("SubmitGrade error:  " + error + now);
+        return res.status(500).send('SubmitGrade error.\n' + now);
     }
 });
 
@@ -585,8 +587,9 @@ router.post('/lesson/getGroupList', isAuth, isTeacher, async (req, res, next) =>
 
         res.send(JSON.stringify(rtnMap));
     } catch (error) {
-        console.log(`Error fetching groupList: ${error}`);
-        res.sendStatus(500).send('Error fetching groupList.');
+        now = Date.now();
+        console.log(`Error fetching groupList: ${error} ${now}`);
+        return res.status(500).send('Error fetching groupList.\n' + now);
     }
 });
 
@@ -606,8 +609,9 @@ router.post('/addSemester', isAuth, isTeacher, async function (req, res, next) {
         console.log('Semester created successfully.')
         res.sendStatus(201);
     } catch (error) {
-        console.error(error);
-        res.status(500).send('Error uploading the file.');
+        now = Date.now();
+        console.log(`Error uploading the file: ${error} ${now}`);
+        return res.status(500).send('Error uploading the file.\n' + now);
     }
 });
 
@@ -616,7 +620,9 @@ router.post("/fetchSemesters", isAuth, isTeacher, async function (req, res, next
         const semester = await Semester.find().sort({ name: -1 });
         res.send(JSON.stringify(semester));
     } catch (e) {
-        console.log("Finding lessons error: ", e);
+        now = Date.now();
+        console.log(`Finding lessons error: ${error} ${now}`);
+        return res.status(500).send('Finding lessons error.\n' + now);
     }
 });
 
@@ -631,7 +637,9 @@ router.post("/fetchSemesters/stu", isAuth, async function (req, res, next) {
         );
         res.send(JSON.stringify(semesters));
     } catch (e) {
-        console.log("Finding lessons error: ", e);
+        now = Date.now();
+        console.log(`Finding lessons error: ${error} ${now}`);
+        return res.status(500).send('Finding lessons error.\n' + now);
     }
 });
 
@@ -655,8 +663,9 @@ router.get('/join/', isAuth, async function (req, res, next) {
         console.log("Update result: " + result);
         res.redirect("/?msg=課程加入成功！");
     } catch (error) {
-        console.error('Error updating member:', error);
-        res.redirect("/?err=學期加入失敗：系統錯誤");
+        now = Date.now();
+        console.error('Error updating member:', error, now);
+        res.redirect("/?err=學期加入失敗：系統錯誤\n"+now);
     }
 });
 
@@ -707,8 +716,9 @@ router.post('/createCat', isAuth, async function (req, res, next) {
         await lesson.save();
         return res.sendStatus(200);
     } catch (error) {
-        console.error('新增組題（主別）錯誤 :', error);
-        res.sendStatus(500).send('新增組題（主別）錯誤');
+        now = Date.now();
+        console.log(`新增組題（主別）錯誤 : ${error} ${now}`);
+        return res.status(500).send('新增組題（主別）錯誤.\n' + now);
     }
 });
 router.get('/joinCategory', isAuth, async function (req, res, next) {
@@ -727,8 +737,9 @@ router.get('/joinCategory', isAuth, async function (req, res, next) {
                 throw "找不到主題";
             }
         } catch (error) {
-            console.log("確認主題錯誤：" + error);
-            return res.redirect("/?err=找不到指定的主題 😢");
+            now = Date.now();
+            console.log(`確認主題錯誤： ${error} ${now}`);
+            return res.redirect("/?err=確認主題錯誤 😢\n"+now);
         }
 
         await Lesson.updateOne({ semester, _id: lessonId, "hws._id": hwId, "hws.categories._id": catId },
@@ -749,8 +760,9 @@ router.get('/joinCategory', isAuth, async function (req, res, next) {
             });
         res.redirect("/?msg=主題加入成功！🤟🏻");
     } catch (error) {
-        console.error('Error updating member:', error);
-        res.redirect("/?err=主題加入失敗：請稍候再試 💦");
+        now = Date.now();
+        console.log(`主題加入失敗： ${error} ${now}`);
+        return res.redirect("/?err=主題加入失敗：請稍候再試 💦\n"+now);
     }
 });
 
@@ -891,8 +903,9 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
             res.send(200);
         }
     } catch (error) {
-        console.log("Homework submit error: ", error);
-        res.sendStatus(500);
+        now = Date.now();
+        console.log(`Homework submit error： ${error} ${now}`);
+        return res.status(500).send("/?err=Homework submit error\n"+now);
     }
 });
 
@@ -918,8 +931,9 @@ router.post("/lesson/getPersonalSubmissions", isAuth, async (req, res, next) => 
         };
         res.send(JSON.stringify(personalSubmissions));
     } catch (error) {
-        console.error(error);
-        res.status(500).send('Error getting the personal submission.');
+        now = Date.now();
+        console.log(`Error getting the personal submission： ${error} ${now}`);
+        return res.status(500).send("/?err=Error getting the personal submission.\n"+now);
     }
 });
 
@@ -963,7 +977,9 @@ router.post("/aiAnalyze", async (req, res) => {
 
         res.status(200);
     } catch (error) {
-        res.status(500).send(`分析錯誤： ${error}`);
+        now = Date.now();
+        console.log(`分析錯誤： ${error} ${now}`);
+        return res.status(500).send("/?err=分析錯誤\n"+now);
     }
 })
 
@@ -1018,8 +1034,9 @@ router.get('/:lessonId/:fileId', async (req, res) => {
         }
         res.sendFile(path.resolve(file.path));
     } catch (error) {
-        console.error(error);
-        res.status(500).send('Error retrieving the file from the database.');
+        now = Date.now();
+        console.log(`Error retrieving the file from the database： ${error} ${now}`);
+        return res.status(500).send("/?err=Error retrieving the file from the database\n"+now);
     }
 });
 // Hw ref file
@@ -1035,13 +1052,13 @@ router.get('/:lessonId/:hwId/:fileId', async (req, res) => {
         const hw = lesson.hws.id(hwId);
         if (!hw) {
             now = Date.now();
-            console.log("Homework not found "+now);
+            console.log("Homework not found " + now);
             return res.status(404).send('Homework not found\n' + now);
         }
         let file = hw.files.id(fileId);
         if (!file) {
             now = Date.now();
-            console.log("File not found "+now);
+            console.log("File not found " + now);
             return res.status(404).send('File not found\n' + now);
         }
         res.sendFile(path.resolve(file.path));
@@ -1069,8 +1086,9 @@ async function compressImageToBase64(inputPath) {
         fs.unlinkSync(compressedOutputPath);
         return `data:${mimeType};base64,${base64Data}`;
     } catch (error) {
-        console.error("Error compressing image:", error);
-        throw error;
+        now = Date.now();
+        console.error(`Error compressing image: ${error} ${now}`);
+        return res.status(500).send("/?err=Error compressing image\n"+now);
     }
 }
 
