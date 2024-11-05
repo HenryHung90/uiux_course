@@ -4,8 +4,8 @@ const multer = require('multer');
 const fs = require('fs');
 const fsPromises = require('fs').promises;
 const path = require('path');
-const Lesson = require("../model/lesson");
-const Semester = require("../model/semester");
+const lessonModel = require("../model/lesson");
+const semesterModel = require("../model/semester");
 const memberModel = require('../model/member');
 const submissionModel = require("../model/submission");
 const sharp = require('sharp');
@@ -14,6 +14,8 @@ const OpenAI = require('openai');
 const { title } = require('process');
 const { error } = require('console');
 let now;
+// For ai analysis
+const aiAnaPrompts = require("../modules/aiAnaPrompts");
 
 const openai = new OpenAI({ apiKey: process.env.GPT_API_KEY });
 async function gptReq(imgArray = [], prompt = '') {
@@ -41,7 +43,33 @@ async function gptReq(imgArray = [], prompt = '') {
         console.log("GPT response: " + JSON.stringify(response.choices[0]));
         return response.choices[0];
     } catch (error) {
-        console.log("Error in gpt query: ", error);
+        now = Date.now();
+        console.log("Error in gpt query: ", error, now);
+        throw error;
+    }
+}
+
+async function gptReqTxt(userData = '', prompt = '') {
+    try {
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+                {
+                    role: "system",
+                    content: prompt
+                },
+                {
+                    role: "user",
+                    content: userData
+                },
+            ],
+            max_tokens: 2048
+        });
+        console.log("GPT response: " + JSON.stringify(response.choices[0]));
+        return response.choices[0];
+    } catch (error) {
+        now = Date.now();
+        console.log("Error in gpt query txt: ", error, now);
         throw error;
     }
 }
@@ -128,7 +156,7 @@ router.post('/addLesson', isAuth, isTeacher, upload.any('files'), async function
             });
             fileInfos = await Promise.all(filePromises);
         }
-        const newLesson = new Lesson({
+        const newLesson = new lessonModel({
             name,
             // hws: JSON.parse(hws),
             links: JSON.parse(links),
@@ -148,11 +176,11 @@ router.post('/addLesson', isAuth, isTeacher, upload.any('files'), async function
 router.post("/updateLessonName", isAuth, isTeacher, async function (req, res, next) {
     const { lessonId, title } = req.body;
     try {
-        await Lesson.updateOne({ _id: lessonId }, {
+        await lessonModel.updateOne({ _id: lessonId }, {
             $set: { name: title }
         });
 
-        const updatedLesson = await Lesson.findById(lessonId);
+        const updatedLesson = await lessonModel.findById(lessonId);
         if (updatedLesson) {
             res.send(JSON.stringify({ "savedTitle": updatedLesson.name }));
         } else {
@@ -167,11 +195,11 @@ router.post("/updateLessonName", isAuth, isTeacher, async function (req, res, ne
 router.post("/updateMatName", isAuth, isTeacher, async function (req, res, next) {
     const { lessonId, matId, title } = req.body;
     try {
-        await Lesson.updateOne({ _id: lessonId, 'files._id': matId }, {
+        await lessonModel.updateOne({ _id: lessonId, 'files._id': matId }, {
             $set: { 'files.$.name': title }
         });
 
-        const updatedLesson = await Lesson.findById(lessonId, 'files'); // 用欄位投影，只回傳 file 欄位
+        const updatedLesson = await lessonModel.findById(lessonId, 'files'); // 用欄位投影，只回傳 file 欄位
         if (updatedLesson) {
             const updatedFile = updatedLesson.files.find(file => file._id.toString() === matId);
             if (updatedFile) {
@@ -193,7 +221,7 @@ router.post("/deleteLesson", isAuth, isTeacher, async function (req, res, next) 
     let errStr = "";
     try {
         // Find the lesson by id
-        const lesson = await Lesson.findById(lessonId);
+        const lesson = await lessonModel.findById(lessonId);
         if (!lesson) {
             now = Date.now();
             console.log(`單元找不到 ${now}`);
@@ -222,7 +250,7 @@ router.post("/deleteLesson", isAuth, isTeacher, async function (req, res, next) 
             errStr += `刪除目錄 ${dirPath} 失敗\n`;
         }
 
-        await Lesson.findByIdAndDelete(lessonId);
+        await lessonModel.findByIdAndDelete(lessonId);
 
         // Error check
         if (errStr.length > 0) {
@@ -247,7 +275,7 @@ router.post("/deleteLesson", isAuth, isTeacher, async function (req, res, next) 
 router.post("/fetchLessons", isAuth, async function (req, res, next) {
     try {
         const { semester } = req.body;
-        const lessons = await Lesson.find({ semester });
+        const lessons = await lessonModel.find({ semester });
         res.send(JSON.stringify(lessons));
     } catch (e) {
         console.log("Finding lessons error: ", e);
@@ -283,7 +311,7 @@ router.post("/addMat", isAuth, isTeacher, upload.any('files'), async function (r
             fileInfos = await Promise.all(filePromises);
         }
 
-        await Lesson.updateOne({ _id: id }, {
+        await lessonModel.updateOne({ _id: id }, {
             $push: {
                 files: fileInfos,
                 links: JSON.parse(links)
@@ -301,17 +329,17 @@ router.post("/deleteMat", isAuth, isTeacher, async function (req, res, next) {
     const { lesson_id, file_id, link_id } = req.body;
     try {
         if (file_id) {
-            const file = await Lesson.findOne({ _id: lesson_id, 'files._id': file_id }, { "files.$": 1 });
+            const file = await lessonModel.findOne({ _id: lesson_id, 'files._id': file_id }, { "files.$": 1 });
             if (fs.existsSync(file.files[0].path)) {
                 await fsPromises.rm(file.files[0].path, { recursive: true });
             }
-            await Lesson.updateOne({ _id: lesson_id }, {
+            await lessonModel.updateOne({ _id: lesson_id }, {
                 $pull: {
                     files: { _id: file.files[0]._id }
                 }
             })
         } else {
-            await Lesson.updateOne({ _id: lesson_id }, {
+            await lessonModel.updateOne({ _id: lesson_id }, {
                 $pull: {
                     links: { _id: link_id }
                 }
@@ -365,7 +393,7 @@ router.post("/addHw", isAuth, isTeacher, upload.any('files'), async function (re
             fileInfos = await Promise.all(filePromises);
         }
 
-        await Lesson.updateOne({ _id: id }, {
+        await lessonModel.updateOne({ _id: id }, {
             $push: {
                 hws: {
                     name: hwName,
@@ -383,7 +411,7 @@ router.post("/addHw", isAuth, isTeacher, upload.any('files'), async function (re
         })
 
         // Retrieve the newly created homework ID
-        const updatedLesson = await Lesson.findById(id);
+        const updatedLesson = await lessonModel.findById(id);
         const newHomework = updatedLesson.hws[updatedLesson.hws.length - 1]; // Last added homework
         const hwId = newHomework._id;
 
@@ -407,7 +435,7 @@ router.post("/rmHw", isAuth, isTeacher, async function (req, res, next) {
     let errStr = "";
     try {
         // Find the lesson by id
-        const hwObj = await Lesson.findOne({ _id: lessonId, 'hws._id': homeworkId }, { 'hws.$': 1 }); // .$ 符合的文，1 返回，0 不返回
+        const hwObj = await lessonModel.findOne({ _id: lessonId, 'hws._id': homeworkId }, { 'hws.$': 1 }); // .$ 符合的文，1 返回，0 不返回
         const hw = hwObj.hws[0];
         if (!hw) {
             now = Date.now();
@@ -429,7 +457,7 @@ router.post("/rmHw", isAuth, isTeacher, async function (req, res, next) {
             }
         }
 
-        await Lesson.updateOne(
+        await lessonModel.updateOne(
             { _id: lessonId },
             { $pull: { hws: { _id: homeworkId } } }
         )
@@ -473,7 +501,6 @@ router.post('/fetchHomework', isAuth, isTeacher, async function (req, res, next)
 
         // Extract student IDs who have already submitted
         const submittedStudentIds = submissionArea.submissions.map(submission => submission.studentId);
-
         // Filter out students who haven't submitted
         studentsWithNoSubmissions = studentsInSemester.filter(student => !submittedStudentIds.includes(student.studentID));
 
@@ -522,7 +549,7 @@ router.post('/fetchHomework', isAuth, isTeacher, async function (req, res, next)
         res.send(JSON.stringify(updateSubmissions));
     } catch (error) {
         now = Date.now();
-        console.log("Error fetching hand ins. " + error + now);
+        console.error(`Error fetching hand ins.\n${error.stack}\n${now}`);
         return res.status(500).send('Error fetching hand ins.\n' + now);
     }
 });
@@ -574,7 +601,7 @@ router.post("/lesson/submitGrade", isAuth, isTeacher, async (req, res, next) => 
 router.post('/lesson/getGroupList', isAuth, isTeacher, async (req, res, next) => {
     try {
         const { lesson_id, hw_id } = req.body;
-        const hwObj = await Lesson.findOne({ _id: lesson_id, 'hws._id': hw_id }, { 'hws.$': 1 });
+        const hwObj = await lessonModel.findOne({ _id: lesson_id, 'hws._id': hw_id }, { 'hws.$': 1 });
         const hw = hwObj.hws[0];
         if (!hw) {
             now = Date.now();
@@ -600,7 +627,7 @@ router.post('/addSemester', isAuth, isTeacher, async function (req, res, next) {
             res.status(400).send("No semester.");
         }
         let semesterID = name + Date.now();
-        const newSemester = new Semester({
+        const newSemester = new semesterModel({
             name,
             id: semesterID
         });
@@ -617,7 +644,7 @@ router.post('/addSemester', isAuth, isTeacher, async function (req, res, next) {
 
 router.post("/fetchSemesters", isAuth, isTeacher, async function (req, res, next) {
     try {
-        const semester = await Semester.find().sort({ name: -1 });
+        const semester = await semesterModel.find().sort({ name: -1 });
         res.send(JSON.stringify(semester));
     } catch (e) {
         now = Date.now();
@@ -631,7 +658,7 @@ router.post("/fetchSemesters/stu", isAuth, async function (req, res, next) {
         let stu = await memberModel.findOne({ email: req.session.email });
         let semesters = await Promise.all(
             stu.semester.map(async s => {
-                let semester = await Semester.findOne({ id: s });
+                let semester = await semesterModel.findOne({ id: s });
                 return semester;
             })
         );
@@ -648,7 +675,7 @@ router.post("/fetchSemesters/stu", isAuth, async function (req, res, next) {
 router.get('/join/', isAuth, async function (req, res, next) {
     const sCode = req.query.s_code;
     try {
-        let semester = await Semester.findOne({ id: sCode });
+        let semester = await semesterModel.findOne({ id: sCode });
         if (!semester) {
             return res.redirect("/?err=學期代碼錯誤");
         }
@@ -665,7 +692,7 @@ router.get('/join/', isAuth, async function (req, res, next) {
     } catch (error) {
         now = Date.now();
         console.error('Error updating member:', error, now);
-        res.redirect("/?err=學期加入失敗：系統錯誤\n"+now);
+        res.redirect("/?err=學期加入失敗：系統錯誤\n" + now);
     }
 });
 
@@ -676,7 +703,7 @@ router.post('/createCat', isAuth, async function (req, res, next) {
     const { lessonId, hwId, catName } = req.body;
     try {
         // Find the lesson by lessonId
-        const lesson = await Lesson.findOne({ _id: lessonId });
+        const lesson = await lessonModel.findOne({ _id: lessonId });
 
         if (!lesson) {
             now = Date.now();
@@ -727,7 +754,7 @@ router.get('/joinCategory', isAuth, async function (req, res, next) {
     try {
         try {
             // check category exist
-            const lesson = await Lesson.findOne({
+            const lesson = await lessonModel.findOne({
                 semester,
                 "_id": lessonId,
                 "hws._id": hwId,
@@ -739,10 +766,10 @@ router.get('/joinCategory', isAuth, async function (req, res, next) {
         } catch (error) {
             now = Date.now();
             console.log(`確認主題錯誤： ${error} ${now}`);
-            return res.redirect("/?err=確認主題錯誤 😢\n"+now);
+            return res.redirect("/?err=確認主題錯誤 😢\n" + now);
         }
 
-        await Lesson.updateOne({ semester, _id: lessonId, "hws._id": hwId, "hws.categories._id": catId },
+        await lessonModel.updateOne({ semester, _id: lessonId, "hws._id": hwId, "hws.categories._id": catId },
             {
                 $push: {
                     "hws.$[hw].categories.$[category].member": {
@@ -762,7 +789,7 @@ router.get('/joinCategory', isAuth, async function (req, res, next) {
     } catch (error) {
         now = Date.now();
         console.log(`主題加入失敗： ${error} ${now}`);
-        return res.redirect("/?err=主題加入失敗：請稍候再試 💦\n"+now);
+        return res.redirect("/?err=主題加入失敗：請稍候再試 💦\n" + now);
     }
 });
 
@@ -797,7 +824,7 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
         }
 
         // Find the lesson by id
-        const hwObj = await Lesson.findOne({ semester, 'hws._id': hwId }, { 'hws.$': 1 });
+        const hwObj = await lessonModel.findOne({ semester, 'hws._id': hwId }, { 'hws.$': 1 });
         const hw = hwObj.hws[0];
         if (!hw) {
             now = Date.now();
@@ -812,7 +839,7 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
             if (!category) {
                 now = Date.now();
                 console.log('找不到組別 ' + now);
-                return res.status(404).send('找不到組別\n' + now);
+                return res.status(404).send('找不到組別，請先加入、新增組別！\n' + now);
             }
 
             for (let member of category.member) {
@@ -905,7 +932,7 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
     } catch (error) {
         now = Date.now();
         console.log(`Homework submit error： ${error} ${now}`);
-        return res.status(500).send("/?err=Homework submit error\n"+now);
+        return res.status(500).send("/?err=Homework submit error\n" + now);
     }
 });
 
@@ -933,55 +960,148 @@ router.post("/lesson/getPersonalSubmissions", isAuth, async (req, res, next) => 
     } catch (error) {
         now = Date.now();
         console.log(`Error getting the personal submission： ${error} ${now}`);
-        return res.status(500).send("/?err=Error getting the personal submission.\n"+now);
+        return res.status(500).send("/?err=Error getting the personal submission.\n" + now);
     }
 });
 
 router.post("/aiAnalyze", async (req, res) => {
-    const { anaType, hwId, submissionId } = req.body;
+    const { anaType, hwId, submissionId, semesterName } = req.body;
     try {
         switch (anaType) {
-            case 'keyWords':
-                let submitHw = await submissionModel.findOne({ hwId, "submissions._id": submissionId }, { 'submissions.$': 1 });
-                submitHw = submitHw.submissions[0];
-                console.log(submitHw.handInData.files);
-                if (submitHw.handInData.files.length < 1) {
-                    console.log("No files to analyze.");
-                    res.status(500).send("No files to analyze.");
-                    return;
-                }
-                // Compress and convert each image to base64
-                const base64Files = await Promise.all(submitHw.handInData.files.map(async (file) => {
-                    return await compressImageToBase64(file.path);
-                }));
-                console.log(base64Files);
-                // AI Analysis
-                let gptRes = await gptReq(base64Files,
-                    "Analyze the uploaded image and extract keywords, focusing on high-frequency terms that are critical for guiding the discussion toward its goal and are related to the subject. Return the result as a JSON string in the format: ```json{'keywords': ['keyword1','keyword2','keyword3',...]}```");
-                let resContent = JSON.parse(gptRes.message.content.replace("```json", "").replace("```", ""));
-
-                await submissionModel.updateOne(
-                    { hwId, "submissions._id": submissionId },
-                    {
-                        $set: {
-                            "submissions.$.analysis.result": [{
-                                title: "關鍵字",
-                                content: resContent.keywords
-                            }]
-                        }
+            case 'byCat':
+                try {
+                    let submitHw = await submissionModel.findOne({ hwId, "submissions._id": submissionId }, { 'submissions.$': 1 });
+                    submitHw = submitHw.submissions[0];
+                    console.log(submitHw.handInData.files);
+                    if (submitHw.handInData.files.length < 1) {
+                        now = Date.now();
+                        console.log("No files to analyze. " + now);
+                        res.status(500).send("No files to analyze.\n" + now);
+                        return;
                     }
-                );
-                res.send(200);
+                    // Compress and convert each image to base64
+                    const base64Files = await Promise.all(submitHw.handInData.files.map(async (file) => {
+                        return await compressImageToBase64(file.path);
+                    }));
+                    console.log(base64Files);
+                    // AI Analysis
+                    let gptRes = await gptReq(base64Files,
+                        aiAnaPrompts.catPrompt(submitHw.category.name).content.replace(/\n+/g, '').trim());
+                    let resContent = JSON.parse(gptRes.message.content.replace("```json", "").replace("```", ""));
+                    await submissionModel.updateOne(
+                        { hwId, "submissions._id": submissionId },
+                        {
+                            $set: {
+                                "submissions.$.analysis.result": [{
+                                    title: "關鍵字",
+                                    content: resContent.keywords
+                                }]
+                            }
+                        }
+                    );
+                    const updateResponse = await lessonModel.updateOne(
+                        { "hws._id": hwId },
+                        {
+                            $set: {
+                                "hws.$.analysis.figJam.cats.$[cat].name": submitHw.category.name,
+                                "hws.$.analysis.figJam.cats.$[cat].keywords": resContent.keywords,
+                                "hws.$.analysis.figJam.cats.$[cat].patterns": resContent.patterns,
+                                "hws.$.analysis.figJam.cats.$[cat].funcUsage": resContent.funcUsage
+                            }
+                        },
+                        {
+                            arrayFilters: [{ "cat.catId": submitHw.category.catId }]
+                        }
+                    );
+                    if (updateResponse.modifiedCount === 0) {
+                        await lessonModel.updateOne(
+                            { "hws._id": hwId },
+                            {
+                                $push: {
+                                    "hws.$.analysis.figJam.cats": {
+                                        catId: submitHw.category.catId,
+                                        name: submitHw.category.name,
+                                        keywords: resContent.keywords,
+                                        patterns: resContent.patterns,
+                                        funcUsage: resContent.funcUsage
+                                    }
+                                }
+                            }
+                        )
+                    }
+                    const reQueryData = await submissionModel.findOne({hwId, "submissions._id": submissionId}, {'submissions.$': 1});
+
+                    res.send(JSON.stringify(reQueryData.submissions[0].analysis.result));
+                } catch (error) {
+                    now = Date.now();
+                    console.log(`作業分析錯誤\n${error.stack}\n${now}`);
+                    res.status(500).send(`作業分析錯誤\n${now}`);
+                }
+                break;
+            case 'byCourse':
+                try {
+                    const hwObj = await lessonModel.findOne({ semester: semesterName, 'hws._id': hwId }, { 'hws.$': 1 });
+                    const hw = hwObj.hws[0];
+                    if (!hw) {
+                        now = Date.now();
+                        console.log("取得分析結果失敗：找不到作業 " + now);
+                        return res.status(404).send("找不到作業\n" + now);
+                    }
+
+                    // Course analyze
+                    const gptRes = await gptReqTxt(JSON.stringify(hw.analysis.figJam.cats), aiAnaPrompts.coursePrompt.content.replace(/\n+/g, '').trim());
+                    let resContent = JSON.parse(gptRes.message.content.replace("```json", "").replace("```", ""));
+                    
+                    // Save analyze result
+                    await lessonModel.updateOne(
+                        { "hws._id": hwId },
+                        {
+                            $set: {
+                                "hws.$.analysis.figJam.highFreqKeywords": resContent.highFreqKeywords,
+                                "hws.$.analysis.figJam.funcUsage": resContent.funcUsage
+                            }
+                        }
+                    )
+
+                    // Query analyze data from db
+                    const reQueryData = await lessonModel.findOne({semester: semesterName, 'hws._id': hwId}, {'hws.$': 1});
+
+                    res.send(JSON.stringify(reQueryData.hws[0].analysis.figJam));
+                } catch (error) {
+                    now = Date.now();
+                    console.log(`全班作業分析錯誤\n${error.stack}\n${now}`);
+                    res.status(500).send(`全班作業分析錯誤\n${now}`);
+                }
                 break;
         }
 
         res.status(200);
     } catch (error) {
         now = Date.now();
-        console.log(`分析錯誤： ${error} ${now}`);
-        return res.status(500).send("/?err=分析錯誤\n"+now);
+        console.log(`分析錯誤：\n${error.stack}\n${now}`);
+        return res.status(500).send("/?err=分析錯誤\n" + now);
     }
 })
+
+router.post("/lesson/getAnalysis", async (req, res) => {
+    const { semester, hwId } = req.body;
+
+    try {
+        const hwObj = await lessonModel.findOne({ semester, 'hws._id': hwId }, { 'hws.$': 1 });
+        const hw = hwObj.hws[0];
+        if (!hw) {
+            now = Date.now();
+            console.log("取得分析結果失敗：找不到作業 " + now);
+            return res.status(404).send("找不到作業\n" + now);
+        }
+
+        res.send(JSON.stringify(hw.analysis.figJam));
+    } catch (error) {
+        now = Date.now();
+        console.log(`取得分析結果失敗： ${error.stack} ` + now);
+        res.status(500).send(`取得分析結果失敗\n` + now);
+    }
+});
 
 //==== Common
 // Route to display an individual file based on its ID
@@ -1021,7 +1141,7 @@ router.get('/getHw/:hwId/:fileId', async (req, res) => {
 router.get('/:lessonId/:fileId', async (req, res) => {
     try {
         const { lessonId, fileId } = req.params;
-        const lesson = await Lesson.findById(lessonId);
+        const lesson = await lessonModel.findById(lessonId);
         if (!lesson) {
             now = Date.now();
             console.log('Lesson not found ' + now);
@@ -1036,14 +1156,14 @@ router.get('/:lessonId/:fileId', async (req, res) => {
     } catch (error) {
         now = Date.now();
         console.log(`Error retrieving the file from the database： ${error} ${now}`);
-        return res.status(500).send("/?err=Error retrieving the file from the database\n"+now);
+        return res.status(500).send("/?err=Error retrieving the file from the database\n" + now);
     }
 });
 // Hw ref file
 router.get('/:lessonId/:hwId/:fileId', async (req, res) => {
     try {
         const { lessonId, hwId, fileId } = req.params;
-        const lesson = await Lesson.findById(lessonId);
+        const lesson = await lessonModel.findById(lessonId);
         if (!lesson) {
             now = Date.now();
             console.log("Lesson not found " + now);
@@ -1088,7 +1208,7 @@ async function compressImageToBase64(inputPath) {
     } catch (error) {
         now = Date.now();
         console.error(`Error compressing image: ${error} ${now}`);
-        return res.status(500).send("/?err=Error compressing image\n"+now);
+        return res.status(500).send("/?err=Error compressing image\n" + now);
     }
 }
 

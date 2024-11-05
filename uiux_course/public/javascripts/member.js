@@ -130,8 +130,8 @@ async function fetchPersonalSubmission() {
         let rtnList = JSON.parse(data);
         return rtnList;
     } catch (error) {
-        console.log(`取得繳交作業失敗：${xhr.responseText}`);
-        alert(`取得繳交作業失敗\n\n錯誤訊息：${xhr.responseText}`);
+        console.log(`取得繳交作業失敗：${error.responseText}`);
+        alert(`取得繳交作業失敗\n\n錯誤訊息：${error.responseText}`);
         return []; // return an empty array if there's an error
     }
 }
@@ -225,10 +225,6 @@ async function showLessonData(lessonIndex) {
                     `).join('') : ''}
                 </ul>
             </td>
-            <td>${hw.src ? hw.src.map(src => {
-        `
-                <a href="${src.path}" target="_blank">${src.name}</a>
-            `}).join('') : ''}</td>
             <td>${hw.attribute == "g" ? "團體" : "個人"}</td>
             <td>${hw.isRegular ? "例行作業" :
             hw.submission.category.catId ?
@@ -280,7 +276,7 @@ async function showLessonData(lessonIndex) {
                                             `).join('') :
                 `<p>暫無分析結果 😵‍💫</p>`
             }
-                                    <button type="button" class="btn btn-outline-dark" onclick="analyzeHw('${hw._id}', '${hw.submission._id}')">（重新）分析</button>
+                                    <button type="button" class="btn btn-outline-dark" onclick="analyzeHw('${hw._id}', '${hw.submission._id}')">分析</button>
                                 </div>
                             </div>
                         </div>
@@ -493,9 +489,26 @@ function showHandInHwModal(hwName = "", hw_id = "", catName = "", catId = "") {
 }
 
 function analyzeHw(hwId, submissionId) {
-    $.post("/course/aiAnalyze", { anaType: "keyWords", hwId, submissionId })
+    $(`#collapseStuId${submissionId} .accordion-body`).empty();
+    $(`#collapseStuId${submissionId}`).addClass("placeholder-glow");
+    $(`#collapseStuId${submissionId} .accordion-body`).append(`
+        <span class="w-100 placeholder"></span>
+        <span class="w-50 placeholder"></span>
+        <span class="w-75 placeholder"></span>
+        <span class="w-25 placeholder"></span>
+        `);
+    $.post("/course/aiAnalyze", { anaType: "byCat", hwId, submissionId })
         .done((data) => {
-            console.log(data);
+            let rtnData = JSON.parse(data);
+            $(`#collapseStuId${submissionId} .accordion-body`).empty();
+            $(`#collapseStuId${submissionId}`).removeClass("placeholder-glow");
+            $(`#collapseStuId${submissionId} .accordion-body`).append(`
+                ${rtnData.length > 0 ?
+                    rtnData.map(result => `
+                        <strong>${result.title}</strong>
+                        <p>${result.content.map(content => `#${content}`).join(' ')}</p>`).join('') : ''}
+                    <button type="button" class="btn btn-outline-dark" onclick="analyzeHw('${hwId}', '${submissionId}')">分析</button>
+                `);
         })
         .fail((xhr, status, error) => {
             console.log(`AI 分析失敗：${xhr.responseText}`);
