@@ -4,6 +4,32 @@ let lessons;
 const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
 const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
 
+// Group ai ana figJam func diagram 
+const funcUsageCanvas_all = new Chart($("#funcUsageCanvas_all"), {
+    type: 'bar',
+    data: {
+        labels: [],
+        datasets: [{
+            data: [],
+            borderWidth: 1,
+            backgroundColor: ['#D04848', '#F3B95F', '#FDE767', '#6895D2']
+        }]
+    },
+    options: {
+        plugins: {
+            legend: {
+                display: false // 隱藏圖例
+            }
+        },
+        indexAxis: 'y',
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
 $().ready(function () {
     updateSemesters();
 
@@ -229,6 +255,7 @@ function removeMetLink(cTime) {
     let isDelete = confirm("確定要刪除教材連結？\n刪除後無法復原");
     if (isDelete) {
         $(`#${cTime}`).remove();
+        // TODO 重新顯示資料
     }
 }
 
@@ -264,7 +291,7 @@ function addHomework() {
         }
 
         // links
-        $("input[name='l-link-add']").each(function () { //TODO: 存完要刪除所有同 name input
+        $("input[name='l-link-add']").each(function () {
             if ($(this).val()) {
                 links.push({ url: $(this).val() });
             }
@@ -286,7 +313,7 @@ function addHomework() {
         // isCustom
         formData.append("isCatCustom", $("#isCatCustom").prop("checked") ? true : false);
 
-        $("button[name='cat-button']").each(function () { //TODO: 存完要刪除所有同 name input
+        $("button[name='cat-button']").each(function () {
             categories.push({
                 name: this.innerHTML
             })
@@ -300,6 +327,13 @@ function addHomework() {
             processData: false,
             contentType: false,
             success: function (res) {
+                // Reset model
+                $("#hwName").val("");
+                $("#hwDes").val("");
+                $("input[name='l-link-add']").closest("div.d-flex.mb-3").remove();
+                $("button[name='cat-button']").remove();
+
+                // TODO 關掉 新增功課 Model
                 alert("新增成功");
                 showLessonData($(".lesson-list").index(".lesson-list-chosen"));
             },
@@ -537,10 +571,6 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
                         .text(`${handinNums} / ${stuNum}`);
                 }
             }
-
-            // console.log(resData.submissions);
-            // console.log(resData.submissions.length);
-            // TODO: res data display
             correctingModalObject.show();
 
             console.log(data);
@@ -551,12 +581,134 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
         })
 }
 
-function showAiAnalysisModal() {
-    // $.post("/course/lesson/get");
+function showAiAnalysisModal(hwId) {
+    $.post("/course/lesson/getAnalysis", { semester: currentSemester.name, hwId })
+        .done((data) => {
+            $("#courseAnaBtn").on("click", () => {
+                courseAnalysis(hwId);
+            });
+            let resData = JSON.parse(data);
+            console.log(data);
 
-    let bsModal = bootstrap.Modal.getInstance($("#aiAnalysisModal"));
-    if (!bsModal) { bsModal = new bootstrap.Modal($("#aiAnalysisModal")) }
-    bsModal.show();
+            // Mutual keywords
+            $("#mutualKeywords").empty();
+            resData.highFreqKeywords.forEach((kw) => {
+                console.log(kw);
+                $("#mutualKeywords").append(`<span class="badge text-bg-dark m-1">#${kw}</span>`);
+            })
+
+            // new Chart($("#funcUsageCanvas_all"), {
+            //     type: 'bar',
+            //     data: {
+            //         labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
+            //         datasets: [{
+            //             data: [12, 19, 3, 5, 2, 3],
+            //             borderWidth: 1,
+            //             backgroundColor: ['#D04848', '#F3B95F', '#FDE767', '#6895D2']
+            //         }]
+            //     },
+            //     options: {
+            //         plugins: {
+            //             legend: {
+            //                 display: false // 隱藏圖例
+            //             }
+            //         },
+            //         indexAxis: 'y',
+            //         scales: {
+            //             y: {
+            //                 beginAtZero: true
+            //             }
+            //         }
+            //     }
+            // });
+            // figJam func usage diagram
+            let labels = [];
+            let datas = [];
+            resData.funcUsage.forEach((func) => {
+                labels.push(func.name);
+                datas.push(func.times);
+            })
+            funcUsageCanvas_all.data.labels = labels;
+            funcUsageCanvas_all.data.datasets[0].data = datas;
+            funcUsageCanvas_all.update();
+
+            // Cat analysis
+            $("#ana-cats").empty();
+            console.log(resData.cats);
+            if (resData.cats.length > 0) {
+                resData.cats.forEach((cat) => {
+                    console.log(cat);
+                    $("#ana-cats").append(`
+                        <div class="col-12 col-lg-4 mb-3">
+                            <div class="card"> 
+                                <div class="card-header">${cat.name}</div>
+                                    <div class="card-body"> 
+                                        <h6 class="card-title">關鍵字</h6>
+                                        <p class="card-text">
+                                            ${cat.keywords.length > 0 ?
+                            cat.keywords.map(kw => `<span class="badge text-bg-secondary m-1">#${kw}</span>`).join('') : ''}
+                                        </p>
+                                        <h6 class="card-title">討論 pattern</h6>
+                                        <p class="card-text">With supporting text below as a natural lead-in to additional content.</p>
+                                        <h6 class="card-title">使用工具</h6>
+                                        <p class="card-text">
+                                            ${cat.funcUsage.length ? cat.funcUsage.map(
+                                func => `#${func.name} ${func.times}<br>`).join('') : ''}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                });
+            }
+
+            let bsModal = bootstrap.Modal.getInstance($("#aiAnalysisModal"));
+            if (!bsModal) { bsModal = new bootstrap.Modal($("#aiAnalysisModal")) }
+            bsModal.show();
+        })
+        .fail((xhr, status, error) => {
+            console.log(`取得分析結果失敗：${xhr.responseText}`);
+            alert(`取得分析結果失敗\n\n錯誤訊息：${xhr.responseText}`);
+        });
+}
+
+function courseAnalysis(hwId) {
+    // Reset display
+    $("#aiAnalysisModal .modal-body").addClass("placeholder-glow");
+    $("#mutualKeywords").empty().addClass("w-75 placeholder");
+
+    funcUsageCanvas_all.data.labels = [];
+    funcUsageCanvas_all.data.datasets[0].data = [];
+    funcUsageCanvas_all.update();
+
+    $.post("/course/aiAnalyze", { anaType: "byCourse", hwId, semesterName: currentSemester.name })
+        .done((data) => {
+            $("#aiAnalysisModal .modal-body").removeClass("placeholder-glow");
+            $("#mutualKeywords").removeClass("w-75 placeholder");
+            
+            let resData = JSON.parse(data);
+            // Mutual keywords
+            resData.highFreqKeywords.forEach((kw) => {
+                console.log(kw);
+                $("#mutualKeywords").append(`<span class="badge text-bg-dark m-1">#${kw}</span>`);
+            })
+
+            // figJam func usage diagram
+            let labels = [];
+            let datas = [];
+            resData.funcUsage.forEach((func) => {
+                labels.push(func.name);
+                datas.push(func.times);
+            })
+            funcUsageCanvas_all.data.labels = labels;
+            funcUsageCanvas_all.data.datasets[0].data = datas;
+            funcUsageCanvas_all.update();
+        })
+        .fail((xhr, status, error) => {
+            console.log(`分析全班作業失敗：${xhr.responseText}`);
+            alert(`分析全班作業失敗：${xhr.responseText}`);
+        })
 }
 
 /**
@@ -786,7 +938,7 @@ function showLessonData(lessonIndex) {
                 <button type="button" class="btn btn-outline-dark">修改</button>
                 <button type="button" class="btn btn-outline-danger" onclick="removeHomework('${lesson._id}', '${hw._id}')">刪除</button>
                 <button type="button" class="btn btn-outline-primary" onclick="showCorrectHomeworkModal('${hw._id}', '${hw.name}', ${hw.isAnalysis}, '${hw.attribute}', ${hw.isHandInByIndividual})">批改</button>
-                ${hw.isAnalysis ? `<button type="button" class="btn btn-outline-success" onclick="showAiAnalysisModal()">AI 分析</button>` : ``}
+                ${hw.isAnalysis ? `<button type="button" class="btn btn-outline-success" onclick="showAiAnalysisModal('${hw._id}')">AI 分析</button>` : ``}
             </td>
         </tr>
     `).join('')}`;
