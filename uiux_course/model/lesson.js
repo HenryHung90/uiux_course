@@ -36,7 +36,29 @@ const lessonSchema = mongoose.Schema({
                 memberId: String, // To make sure same person
             }]
         }],
-        isAnalysis: Boolean
+        isAnalysis: Boolean,
+        analysis: {
+            figJam: {
+                highFreqKeywords: [String],
+                funcUsage: [{
+                    name: String,
+                    times: String
+                }],
+                cats: [{
+                    name: String,
+                    catId: String,
+                    keywords: [String],
+                    patterns: [{
+                        funcUsage: String,
+                        // TODO 待調整 pattern 紀錄內容
+                    }],
+                    funcUsage:[{
+                        name: String,
+                        times: String
+                    }]
+                }]
+            }
+        }
     }],
     semester: {
         type: String,
@@ -44,6 +66,6 @@ const lessonSchema = mongoose.Schema({
     }
 });
 
-const Lesson = mongoose.model("lessons"/* 資料表 */, lessonSchema);
+const lessonModal = mongoose.model("lessons"/* 資料表 */, lessonSchema);
 
-module.exports = Lesson;
+module.exports = lessonModal;
