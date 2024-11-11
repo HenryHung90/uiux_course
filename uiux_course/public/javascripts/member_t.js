@@ -652,7 +652,7 @@ function updateHomework(hwId) {
     })
     if (JSON.stringify(categories) !== JSON.stringify(hwCreateUpdateModal.data.categories)) {
         formData.append("categories", JSON.stringify(categories));
-
+    }
     $.ajax({
         url: "/course/updtHw",
         type: "POST",
