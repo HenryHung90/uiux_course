@@ -247,7 +247,7 @@ const hwCreateUpdateModal = {
                     $("#catContainer").empty().addClass("d-none");
                 } else {
                     $("#catInputContainer").removeClass("d-none");
-                    $("#catContainer").removeClass("d-none");
+                    $("#catContainer").empty().removeClass("d-none");
                 }
                 break;
         }
