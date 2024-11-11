@@ -674,6 +674,8 @@ function showAiAnalysisModal(hwId) {
 }
 
 function courseAnalysis(hwId) {
+    // Disable ana btn
+    $("#courseAnaBtn").prop('disabled', true);
     // Reset display
     $("#aiAnalysisModal .modal-body").addClass("placeholder-glow");
     $("#mutualKeywords").empty().addClass("w-75 placeholder");
@@ -684,9 +686,12 @@ function courseAnalysis(hwId) {
 
     $.post("/course/aiAnalyze", { anaType: "byCourse", hwId, semesterName: currentSemester.name })
         .done((data) => {
+            // Enable ana btn
+            $("#courseAnaBtn").prop('disabled', false);
+
             $("#aiAnalysisModal .modal-body").removeClass("placeholder-glow");
             $("#mutualKeywords").removeClass("w-75 placeholder");
-            
+
             let resData = JSON.parse(data);
             // Mutual keywords
             resData.highFreqKeywords.forEach((kw) => {
@@ -706,6 +711,12 @@ function courseAnalysis(hwId) {
             funcUsageCanvas_all.update();
         })
         .fail((xhr, status, error) => {
+            // Enable ana btn
+            $("#courseAnaBtn").prop('disabled', false);
+
+            $("#aiAnalysisModal .modal-body").removeClass("placeholder-glow");
+            $("#mutualKeywords").removeClass("w-75 placeholder");
+
             console.log(`分析全班作業失敗：${xhr.responseText}`);
             alert(`分析全班作業失敗：${xhr.responseText}`);
         })

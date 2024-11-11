@@ -1029,7 +1029,7 @@ router.post("/aiAnalyze", async (req, res) => {
                             }
                         )
                     }
-                    const reQueryData = await submissionModel.findOne({hwId, "submissions._id": submissionId}, {'submissions.$': 1});
+                    const reQueryData = await submissionModel.findOne({ hwId, "submissions._id": submissionId }, { 'submissions.$': 1 });
 
                     res.send(JSON.stringify(reQueryData.submissions[0].analysis.result));
                 } catch (error) {
@@ -1051,7 +1051,7 @@ router.post("/aiAnalyze", async (req, res) => {
                     // Course analyze
                     const gptRes = await gptReqTxt(JSON.stringify(hw.analysis.figJam.cats), aiAnaPrompts.coursePrompt.content.replace(/\n+/g, '').trim());
                     let resContent = JSON.parse(gptRes.message.content.replace("```json", "").replace("```", ""));
-                    
+
                     // Save analyze result
                     await lessonModel.updateOne(
                         { "hws._id": hwId },
@@ -1064,7 +1064,7 @@ router.post("/aiAnalyze", async (req, res) => {
                     )
 
                     // Query analyze data from db
-                    const reQueryData = await lessonModel.findOne({semester: semesterName, 'hws._id': hwId}, {'hws.$': 1});
+                    const reQueryData = await lessonModel.findOne({ semester: semesterName, 'hws._id': hwId }, { 'hws.$': 1 });
 
                     res.send(JSON.stringify(reQueryData.hws[0].analysis.figJam));
                 } catch (error) {
