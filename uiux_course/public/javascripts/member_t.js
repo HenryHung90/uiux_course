@@ -443,6 +443,8 @@ function showHwCreateUpdateModal(isCreate = true, lessonId = '', hwId = '') {
         $.post("course/getHwInfo", { lessonId, hwId })
             .done((data) => {
                 const hwData = JSON.parse(data);
+                let modalFooter = `
+                    <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">取消</button>
                     <button class="btn btn-primary" type="button" onclick="updateHomework('${hwId}')">更新</button>
                 `;
                 hwCreateUpdateModal.setData(
