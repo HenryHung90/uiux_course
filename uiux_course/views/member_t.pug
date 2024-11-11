@@ -90,66 +90,14 @@ block content
               li.nav-item(role='presentation')
                 button#pills-material-tab.nav-link(data-bs-toggle='pill' data-bs-target='#pills-material' type='button' role='tab' aria-controls='pills-material' aria-selected='false' onclick="toggleHwMatAddBtn('mat')") 教材
               li#addHwBtn.nav-item.ms-auto(role='presentation')
-                button.btn.btn-dark(type='button' data-bs-toggle='modal' data-bs-target='#addHwModal') 新增作業
-                #addHwModal.modal.fade(tabindex='-1' aria-labelledby='exampleModalLabel' aria-hidden='true')
+                button.btn.btn-dark(type='button' onclick="showHwCreateUpdateModal()") 新增作業
+                #hwCreateUpdateModal.modal.fade(tabindex='-1' aria-labelledby='hwCreateUpdateModalLabel' aria-hidden='true')
                   .modal-dialog
                     .modal-content
                       .modal-header
-                        h1#exampleModalLabel.modal-title.fs-5 新增作業
+                        h1#hwCreateUpdateModalLabel.modal-title.fs-5 
                         button.btn-close(type='button' data-bs-dismiss='modal' aria-label='Close')
                       .modal-body
-                        .mb-3 
-                          label.form-label(for="hwName") 作業名稱
-                          input#hwName.form-control(type="text", name="hwName")
-                        .mb-3 
-                          label.form-label(for="hwDes") 說明(Optional)
-                          textarea#hwDes.form-control(name="hwDes")
-                        #hwAddLink.mb-3
-                          div.form-label
-                            span.me-3 資源上傳(Optional)
-                            button.btn.btn-outline-dark(type="button" onclick="newMetLink('#hwAddLink')") 加連結
-                          label.form-label(for='hw-files-add') 檔案可多選
-                          input#hw-files-add.form-control.mb-3(type='file' multiple='')
-                        .mb-3
-                          .d-flex
-                            label.form-label.me-4(for="hwAttr") 屬性
-                            #handInIndividualGroup.form-check.form-switch.d-none
-                              label(for="isHandInByIndividual") 個別繳交
-                              input#isHandInByIndividual.form-check-input(type="checkbox", name="isHandInByIndividual")
-                          select#hwAttr.form-select(name="hwAttr" ) 
-                            option(value="p") 個人 
-                            option(value="g") 團體
-                        .mb-3
-                          div.form-check.form-switch
-                              label.form-check-label.me-4(for="isAnalysis") 
-                                span AI 分析
-                                span 
-                                  img(src="./images/question-mark.svg" style="width: 15px;"
-                                    data-bs-toggle="tooltip" data-bs-placement="top"
-                                    data-bs-custom-class="custom-tooltip"
-                                    data-bs-title="選擇後，學生上傳作業時，才會進行 AI 分析"
-                                  )
-                              input#isAnalysis.form-check-input(type="checkbox", name="isAnalysis" role="switch")    
-                        .mb-3 
-                          div.form-label.d-flex
-                            label.me-4(for="hwAttr") 主題
-                            div.form-check.form-switch
-                              label.form-check-label.me-4(for="isCatReg") 
-                                span 例行作業
-                                span 
-                                  img(src="./images/question-mark.svg" style="width: 15px;"
-                                    data-bs-toggle="tooltip" data-bs-placement="top"
-                                    data-bs-custom-class="custom-tooltip"
-                                    data-bs-title="全班的例行性作業，無主題且不分組"
-                                  )
-                              input#isCatReg.form-check-input(type="checkbox", name="isCatReg" role="switch" onclick="customCatToggle('reg')" checked)
-                            div.form-check.form-switch
-                              label.form-check-label(for="isCatCustom") 自訂
-                              input#isCatCustom.form-check-input(type="checkbox", name="isCatCustom" role="switch" onclick="customCatToggle('oth')")
-                          #catInputContainer.d-flex.justify-content-center.mb-4.d-none
-                            input#catInput.form-control.w-50.me-3(type="text" placeholder="請輸入主題")
-                            button.btn.btn-outline-dark(type="button" onclick="addCat()") +
-                          #catContainer.w-100.px-auto.d-flex.flex-wrap.justify-content-center.d-none
                       .modal-footer
                         button.btn.btn-secondary(type='button' data-bs-dismiss='modal') 取消
                         button.btn.btn-primary(type='button' onclick="addHomework()") 儲存
@@ -170,7 +118,7 @@ block content
                           input#l-files-add.form-control(type='file' multiple='')
                       .modal-footer
                         button.btn.btn-secondary(type='button' data-bs-dismiss='modal') 取消
-                        button.btn.btn-primary(type='button' onclick="addMat()") 儲存
+                        button.btn.btn-primary(type='button' onclick="addCourseMat()") 儲存
             #pills-tabContent.tab-content
               #pills-homework.tab-pane.fade.show.active(role='tabpanel' aria-labelledby='pills-homework-tab' tabindex='0') 
                 table#homework-table.table.table-hover
