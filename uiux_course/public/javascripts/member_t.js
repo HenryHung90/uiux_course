@@ -30,19 +30,246 @@ const funcUsageCanvas_all = new Chart($("#funcUsageCanvas_all"), {
     }
 });
 
+/**
+ * Homework create / Update Modal obj
+ */
+const hwCreateUpdateModal = {
+    modal: $("#hwCreateUpdateModal"),
+    /**
+     * @property {string} name - 作業名稱
+     * @property {string} hwDes - 作業說明
+     * @property {array} links - 參考連結
+     * @property {array} files - 參考檔案
+     * @property {string} hwAttr - 屬性：個人/團體
+     * @property {bool} isAnalysis - AI 分析
+     * @property {bool} isCatReg - 例行作業
+     * @property {bool} isCatCustom - 自訂主題
+     */
+    data: {
+        name: "",
+        hwDes: "",
+        links: [],
+        files: [],
+        hwAttr: "p",
+        isHandInByIndividual: false,
+        isAnalysis: false,
+        isCatReg: true,
+        isCatCustom: false,
+        categories: []
+    },
+    privateData: {
+        lessonId: "",
+        hwId: ""
+    },
+    setData(name = "", hwDes = "", links = [], files = [], hwAttr = "p", isHandInByIndividual = false, isAnalysis = false, isCatReg = true, isCatCustom = false, categories = []) {
+        this.data = {
+            name: name,
+            hwDes: hwDes,
+            links: links,
+            files: files,
+            hwAttr: hwAttr,
+            isHandInByIndividual: isHandInByIndividual,
+            isAnalysis: isAnalysis,
+            isCatReg: isCatReg,
+            isCatCustom: isCatCustom,
+            categories: categories
+        }
+    },
+    setPrivateData(lessonId, hwId) {
+        this.privateData = {
+            lessonId,
+            hwId
+        }
+    },
+    resetData() {
+        this.data = {
+            name: "",
+            hwDes: "",
+            links: [],
+            files: [],
+            hwAttr: "p",
+            isHandInByIndividual: false,
+            isAnalysis: false,
+            isCatReg: true,
+            isCatCustom: false,
+            categories: []
+        };
+        this.privateData = {
+            lessonId: "",
+            hwId: ""
+        }
+    },
+    setModal(mTitle = "", mFooter = "") {
+        this.modal.find(".modal-title").text(mTitle);
+        this.modal.find(".modal-body").html(
+            `
+            <div class="mb-3"> <label class="form-label" for="hwName">作業名稱</label><input class="form-control" id="hwName" type="text" name="hwName" value="${this.data.name}" /></div>
+            <div class="mb-3"> <label class="form-label" for="hwDes">說明(Optional)</label><textarea class="form-control" id="hwDes" name="hwDes">${this.data.hwDes}</textarea></div>
+            <div class="mb-3" id="hwAddLink">
+                <div class="form-label">
+                    <span class="me-3">資源上傳(Optional)</span>
+                    <button class="btn btn-outline-dark" type="button" onclick="hwCreateUpdateModal.newMetLink('#hwAddLink')">加連結</button>
+                </div>
+                <label class="form-label" for="hw-files-add">檔案可多選</label>
+                <input class="form-control mb-3" id="hw-files-add" type="file" multiple="" />
+            </div>
+            <div class="mb-3">
+                <div class="d-flex"><label class="form-label me-4" for="hwAttr">屬性</label>
+                    <div class="form-check form-switch d-none" id="handInIndividualGroup">
+                        <label for="isHandInByIndividual">個別繳交</label>
+                        <input class="form-check-input" id="isHandInByIndividual" type="checkbox" name="isHandInByIndividual" ${this.data.isHandInByIndividual ? "checked" : ""} />
+                    </div>
+                </div>
+                <select class="form-select" id="hwAttr" name="hwAttr"> 
+                    <option value="p" ${this.data.hwAttr == 'p' ? "selected" : ""}>個人</option>
+                    <option value="g" ${this.data.hwAttr == 'g' ? "selected" : ""}>團體</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <div class="form-check form-switch">
+                    <label class="form-check-label me-4" for="isAnalysis"><span>AI 分析</span><span><img src="./images/question-mark.svg" style="width: 15px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" data-bs-title="選擇後，學生上傳作業時，才會進行 AI 分析"/></span></label>
+                    <input class="form-check-input" id="isAnalysis" type="checkbox" name="isAnalysis" role="switch" ${this.data.isAnalysis ? "checked" : ""} />
+                </div>
+            </div>
+            <div class="mb-3">
+                <div class="form-label d-flex"><label class="me-4" for="hwAttr">主題</label>
+                    <div class="form-check form-switch">
+                        <label class="form-check-label me-4" for="isCatReg"><span>例行作業</span><span><img src="./images/question-mark.svg" style="width: 15px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" data-bs-title="全班的例行性作業，無主題且不分組"/></span></label>
+                        <input class="form-check-input" id="isCatReg" type="checkbox" name="isCatReg" role="switch" onclick="hwCreateUpdateModal.customCatToggle('reg')" ${this.data.isCatReg ? "checked" : ""} /></div>
+                    <div class="form-check form-switch">
+                        <label class="form-check-label" for="isCatCustom">自訂</label>
+                        <input class="form-check-input" id="isCatCustom" type="checkbox" name="isCatCustom" role="switch" onclick="hwCreateUpdateModal.customCatToggle('oth')" ${this.data.isCatCustom ? "checked" : ""} />
+                    </div>
+                </div>
+                <div class="d-flex justify-content-center mb-4 d-none" id="catInputContainer">
+                    <input class="form-control w-50 me-3" id="catInput" type="text" placeholder="請輸入主題" />
+                    <button class="btn btn-outline-dark" type="button" onclick="hwCreateUpdateModal.addCat()">+</button>
+                </div>
+                <div class="w-100 px-auto d-flex flex-wrap justify-content-center d-none" id="catContainer"></div>
+            </div>
+            `
+        );
+
+        // Attribute event listen
+        $("#hwAttr").on("change", function () {
+            if ($("#hwAttr").val() == "g") {
+                $("#isCatReg").prop("checked", false);
+                $("#catInputContainer").removeClass("d-none");
+                $("#catContainer").removeClass("d-none");
+                $("#handInIndividualGroup").removeClass("d-none");
+            } else if ($("#hwAttr").val() == "p") {
+                $("#handInIndividualGroup").addClass("d-none");
+            }
+        })
+
+        // 初始化主題選項狀態
+        if (this.data.isCatReg) {
+            this.customCatToggle("reg");
+        } else {
+            this.customCatToggle("oth");
+        }
+
+        // 渲染現有 categories
+        this.data.categories.forEach(category => {
+            let newCat = `
+            <button class="btn btn-outline-danger m-2" type="button" name="cat-button" onclick="hwCreateUpdateModal.rmCat(this)">${category.name}</button>
+        `;
+            $("#catContainer").append(newCat);
+        });
+
+        // Material
+        // files
+        this.data.files.forEach((file) => {
+            let cTime = Date.now() + Math.floor(Math.random() * 10);
+            let newfile = `
+                <div class="d-flex mb-3" id="${cTime}file">
+                    <button class="btn btn-danger me-2" type="button" onclick="hwCreateUpdateModal.removeDomObject('${cTime}file', '檔案')">-</button>
+                    <a id="${file._id}" href="course/${this.privateData.lessonId}/${this.privateData.hwId}/${file._id}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;" name="l-file">${file.name}</a>
+                </div>
+            `;
+            $("#hwAddLink").append(newfile);
+        });
+        // links
+        this.data.links.forEach((link) => {
+            this.newMetLink("#hwAddLink", link.url);
+        });
+        this.modal.find(".modal-footer").html(mFooter);
+    },
+    show() {
+        let bsModal = bootstrap.Modal.getInstance(this.modal);
+        if (!bsModal) { bsModal = new bootstrap.Modal(this.modal) }
+        bsModal.show();
+    },
+    hide() {
+        let bsModal = bootstrap.Modal.getInstance(this.modal);
+        if (!bsModal) { bsModal = new bootstrap.Modal(this.modal) }
+        bsModal.hide();
+    },
+    newMetLink(container, link = "") {
+        let cTime = Date.now();
+        let newLink = `
+            <div class="d-flex mb-3" id="${cTime}">
+                <button class="btn btn-danger me-2" type="button" onclick="hwCreateUpdateModal.removeMetLink(${cTime})">-</button>
+                <input class="form-control" type="text" name="l-link-add" placeholder="請輸入連結" value="${link}">
+            </div>
+        `;
+        $(container).append(newLink);
+    },
+    removeMetLink(cTime) {
+        let isDelete = confirm("確定要刪除資源連結？\n刪除後無法復原");
+        if (isDelete) {
+            $(`#${cTime}`).remove();
+        }
+    },
+    removeDomObject(id, obj = "") {
+        let isDelete = confirm(`確認要刪除${obj}?\n刪除後無法復原`);
+        if (isDelete) {
+            $(`#${id}`).remove();
+        }
+    },
+    customCatToggle(status) {
+        switch (status) {
+            // Regular
+            case "reg":
+                if ($("#isCatReg").is(":checked")) {
+                    $("#hwAttr").val("p").change();
+                    $("#isCatCustom").prop("checked", false);
+                } else if (!$("#isCatReg").is(":checked") && !$("#isCatCustom").is(":checked")) {
+                    $("#catInputContainer").removeClass("d-none");
+                    $("#catContainer").removeClass("d-none");
+                }
+                break;
+            // Custom / Specify
+            case "oth":
+                if ($("#isCatCustom").is(":checked")) {
+                    $("#isCatReg").prop("checked", false);
+                    $("#catInputContainer").addClass("d-none");
+                    $("#catContainer").empty().addClass("d-none");
+                } else {
+                    $("#catInputContainer").removeClass("d-none");
+                    $("#catContainer").removeClass("d-none");
+                }
+                break;
+        }
+    },
+    addCat() {
+        if ($.trim($("#catInput").val())) {
+            let newCat = `
+                <button class="btn btn-outline-danger m-2" type="button" name="cat-button" onclick="hwCreateUpdateModal.rmCat(this)">${$("#catInput").val()}</button>
+            `;
+            $("#catContainer").append(newCat);
+            $("#catInput").val("");
+        }
+    },
+    rmCat(ele) {
+        if (confirm("確定刪除嗎？")) {
+            $(ele).remove();
+        }
+    }
+}
+
 $().ready(function () {
     updateSemesters();
-
-    $("#hwAttr").on("change", function () {
-        if ($("#hwAttr").val() == "g") {
-            $("#isCatReg").prop("checked", false);
-            $("#catInputContainer").removeClass("d-none");
-            $("#catContainer").removeClass("d-none");
-            $("#handInIndividualGroup").removeClass("d-none");
-        } else if ($("#hwAttr").val() == "p") {
-            $("#handInIndividualGroup").addClass("d-none");
-        }
-    })
 })
 
 function addLesson() {
@@ -103,6 +330,7 @@ function addLesson() {
     }
 }
 
+// Homework mat / create btn display toggle
 function toggleHwMatAddBtn(btn) {
     if (btn == "hw") {
         $("#addHwBtn").removeClass("d-none");
@@ -113,49 +341,7 @@ function toggleHwMatAddBtn(btn) {
     }
 }
 
-function customCatToggle(status) {
-    switch (status) {
-        // Regular
-        case "reg":
-            if ($("#isCatReg").is(":checked")) {
-                $("#hwAttr").val("p").change();
-                $("#isCatCustom").prop("checked", false);
-            } else if (!$("#isCatReg").is(":checked") && !$("#isCatCustom").is(":checked")) {
-                $("#catInputContainer").removeClass("d-none");
-                $("#catContainer").removeClass("d-none");
-            }
-            break;
-        // Custom / Specify
-        case "oth":
-            if ($("#isCatCustom").is(":checked")) {
-                $("#isCatReg").prop("checked", false);
-                $("#catInputContainer").addClass("d-none");
-                $("#catContainer").addClass("d-none");
-            } else {
-                $("#catInputContainer").removeClass("d-none");
-                $("#catContainer").removeClass("d-none");
-            }
-            break;
-    }
-}
-
-function addCat() {
-    if ($.trim($("#catInput").val())) {
-        let newCat = `
-            <button class="btn btn-outline-danger m-2" type="button" name="cat-button" onclick="rmCat(this)">${$("#catInput").val()}</button>
-        `;
-        $("#catContainer").append(newCat);
-        $("#catInput").val("");
-    }
-}
-
-function rmCat(ele) {
-    if (confirm("確定刪除嗎？")) {
-        $(ele).remove();
-    }
-}
-
-function addMat() {
+function addCourseMat() {
     let formData = new FormData();
     formData.append("semester", currentSemester.name);
     formData.append("name", $(".lesson-list-chosen").text());
@@ -240,29 +426,53 @@ function deleteMat(lesson_id, mat_id, isFile) {
 //     $("#l-homeworks tbody").append(newHw);
 // }
 
-function newMetLink(container) {
-    let cTime = Date.now();
-    let newLink = `
-        <div class="d-flex mb-3" id="${cTime}">
-            <button class="btn btn-danger me-2" type="button" onclick="removeMetLink(${cTime})">-</button>
-            <input class="form-control" type="text" name="l-link-add" placeholder="請輸入連結">
-        </div>
-    `;
-    $(container).append(newLink);
-}
-
-function removeMetLink(cTime) {
-    let isDelete = confirm("確定要刪除教材連結？\n刪除後無法復原");
-    if (isDelete) {
-        $(`#${cTime}`).remove();
-        // TODO 重新顯示資料
+function showHwCreateUpdateModal(isCreate = true, lessonId = '', hwId = '') {
+    if (isCreate) {
+        hwCreateUpdateModal.resetData();
+        let modalFooter = `
+            <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">取消</button>
+            <button class="btn btn-primary" type="button" onclick="addHomework()">儲存</button>
+        `;
+        hwCreateUpdateModal.setModal("新增作業", modalFooter);
+        hwCreateUpdateModal.show();
+    } else {
+        if (!hwId) {
+            alert("取得作業資訊錯誤：無 hwId");
+            return;
+        }
+        $.post("course/getHwInfo", { lessonId, hwId })
+            .done((data) => {
+                const hwData = JSON.parse(data);
+                let modalFooter = `
+                    <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">取消</button>
+                    <button class="btn btn-primary" type="button" onclick="updateHomework('${hwId}')">更新</button>
+                `;
+                hwCreateUpdateModal.setData(
+                    hwData.name,
+                    hwData.description,
+                    hwData.links,
+                    hwData.files,
+                    hwData.attribute,
+                    hwData.isHandInByIndividual,
+                    hwData.isAnalysis,
+                    hwData.isRegular,
+                    hwData.isCatCustom,
+                    hwData.categories);
+                hwCreateUpdateModal.setPrivateData(lessonId, hwId);
+                hwCreateUpdateModal.setModal("更新作業", modalFooter);
+                hwCreateUpdateModal.show();
+            })
+            .fail((xhr, status, error) => {
+                console.log(`取得作業資訊錯誤：\n${xhr.responseText}`);
+                alert(`取得作業資訊錯誤\n\n錯誤訊息：${xhr.responseText}`);
+            })
     }
 }
 
 function addHomework() {
     let formData = new FormData();
     formData.append("semester", currentSemester.name);
-    formData.append("name", $(".lesson-list-chosen").text());
+    formData.append("name", $(".lesson-list-chosen").val());
     let files = $("#hw-files-add")[0].files;
     let links = [];
     let categories = [];
@@ -272,79 +482,210 @@ function addHomework() {
         l_id = l_id.substring(0, l_id.length - 3);
         formData.append('id', l_id);
     } else {
-        alert("系統錯誤，請洽系統人員");
+        alert("系統錯誤，請洽系統人員\nFront end error: Get lesson Id failed!");
         return;
     }
 
+    // Hw name validation
     if (!$("#hwName").val()) {
         alert("請輸入作業名稱！");
-    } else {
-        // hwName
-        formData.append("hwName", $("#hwName").val());
+        return;
+    }
+    // hwName
+    formData.append("hwName", $("#hwName").val());
 
-        // description
-        formData.append("description", $("#hwDes").val());
+    // description
+    formData.append("description", $("#hwDes").val());
 
-        // files
-        for (let i = 0; i < files.length; i++) {
-            formData.append("files", files[i]);
+    // files
+    for (let i = 0; i < files.length; i++) {
+        formData.append("files", files[i]);
+    }
+
+    // links
+    $("input[name='l-link-add']").each(function () {
+        if ($(this).val()) {
+            links.push({ url: $(this).val() });
         }
+    });
+    formData.append("links", JSON.stringify(links));
 
-        // links
-        $("input[name='l-link-add']").each(function () {
-            if ($(this).val()) {
-                links.push({ url: $(this).val() });
-            }
-        });
-        formData.append("links", JSON.stringify(links));
+    // attribute
+    formData.append("attribute", $("#hwAttr").val());
 
-        // attribute
-        formData.append("attribute", $("#hwAttr").val());
+    // isAnalysis
+    formData.append("isAnalysis", $("#isAnalysis").prop("checked") ? true : false);
 
-        // isAnalysis
-        formData.append("isAnalysis", $("#isAnalysis").prop("checked") ? true : false);
+    // isHandInByIndividual
+    formData.append("isHandInByIndividual", $("#isHandInByIndividual").prop("checked") ? true : false);
 
-        // isHandInByIndividual
-        formData.append("isHandInByIndividual", $("#isHandInByIndividual").prop("checked") ? true : false);
+    // isRegular
+    formData.append("isRegular", $("#isCatReg").prop("checked") ? true : false);
 
-        // isRegular
-        formData.append("isRegular", $("#isCatReg").prop("checked") ? true : false);
+    // isCustom
+    formData.append("isCatCustom", $("#isCatCustom").prop("checked") ? true : false);
 
-        // isCustom
-        formData.append("isCatCustom", $("#isCatCustom").prop("checked") ? true : false);
-
-        $("button[name='cat-button']").each(function () {
-            categories.push({
-                name: this.innerHTML
-            })
+    $("button[name='cat-button']").each(function () {
+        categories.push({
+            name: this.innerHTML
         })
+    })
+    formData.append("categories", JSON.stringify(categories));
+
+    $.ajax({
+        url: "/course/addHw",
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function (res) {
+            alert("新增成功");
+            hwCreateUpdateModal.hide();
+            fetchLessons();
+            showLessonData($(".lesson-list").index(".lesson-list-chosen"));
+        },
+        error: function (jqXHR/* XMLHttpRequest */, textStatus, errorThrown) {
+            console.log(`作業新增失敗：${jqXHR.responseText}`);
+            alert(`作業新增失敗\n\n錯誤訊息：${jqXJR.responseText}`);
+            fetchLessons();
+            showLessonData($(".lesson-list").index(".lesson-list-chosen"));
+        }
+    })
+}
+
+function updateHomework(hwId) {
+    let formData = new FormData();
+
+    // For file storage path
+    formData.append("semester", currentSemester.name);
+    formData.append("name", $(".lesson-list-chosen").val());
+
+    let l_id = $(".lesson-list-chosen")[0].id;
+    // Get lesson id
+    if (l_id.length) {
+        l_id = l_id.substring(0, l_id.length - 3);
+        formData.append('lessonId', l_id);
+    } else {
+        alert("系統錯誤，請洽系統人員\nFront-end error: Get lesson Id failed!");
+        return;
+    }
+    formData.append('hwId', hwId);
+
+    // Hw name validation
+    if (!$("#hwName").val()) {
+        alert("請輸入作業名稱！");
+        return;
+    }
+    // hwName
+    if ($("#hwName").val() != hwCreateUpdateModal.data.name) {
+        formData.append("hwName", $("#hwName").val());
+    }
+
+    // description
+    if ($("#hwDes").val() != hwCreateUpdateModal.data.hwDes) {
+        formData.append("description", $("#hwDes").val());
+    }
+
+    // files
+    let toDelFiles = [];
+    // Compare files on the screen with original data
+    hwCreateUpdateModal.data.files.forEach((file) => {
+        let found = $("a[name='l-file']").filter(function () {
+            return $(this).attr("id") === file._id;
+        }).length > 0;
+
+        if (!found) {
+            toDelFiles.push(file._id);
+        }
+    });
+    // Delete file
+    formData.append("deleteFiles", JSON.stringify(toDelFiles));
+
+    // New file
+    let newFiles = $("#hw-files-add")[0].files;
+    for (let i = 0; i < newFiles.length; i++) {
+        formData.append("newFiles", newFiles[i]);
+    }
+
+    // links
+    let links = [];
+    $("input[name='l-link-add']").each(function () {
+        if ($(this).val()) {
+            links.push({ url: $(this).val() });
+        }
+    });
+    if (areLinksDifferent(links, hwCreateUpdateModal.data.links)) {
+        formData.append("links", JSON.stringify(links));
+    }
+
+    // attribute
+    if ($("#hwAttr").val() != hwCreateUpdateModal.data.hwAttr) {
+        formData.append("attribute", $("#hwAttr").val());
+    }
+
+    // isAnalysis
+    if ($("#isAnalysis").prop("checked") != hwCreateUpdateModal.data.isAnalysis) {
+        formData.append("isAnalysis", $("#isAnalysis").prop("checked") ? true : false);
+    }
+
+    // isHandInByIndividual
+    if ($("#isHandInByIndividual").prop("checked") != hwCreateUpdateModal.data.isHandInByIndividual) {
+        formData.append("isHandInByIndividual", $("#isHandInByIndividual").prop("checked") ? true : false);
+    }
+
+    // isRegular
+    if ($("#isCatReg").prop("checked") != hwCreateUpdateModal.data.isCatReg) {
+        formData.append("isRegular", $("#isCatReg").prop("checked") ? true : false);
+    }
+
+    // isCustom
+    if ($("#isCatCustom").prop("checked") != hwCreateUpdateModal.data.isCatCustom) {
+        formData.append("isCatCustom", $("#isCatCustom").prop("checked") ? true : false);
+    }
+
+    // categories
+    let categories = [];
+    $("button[name='cat-button']").each(function () {
+        categories.push({
+            name: this.innerHTML
+        })
+    })
+    if (JSON.stringify(categories) !== JSON.stringify(hwCreateUpdateModal.data.categories)) {
         formData.append("categories", JSON.stringify(categories));
 
-        $.ajax({
-            url: "/course/addHw",
-            type: "POST",
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function (res) {
-                // Reset model
-                $("#hwName").val("");
-                $("#hwDes").val("");
-                $("input[name='l-link-add']").closest("div.d-flex.mb-3").remove();
-                $("button[name='cat-button']").remove();
-
-                // TODO 關掉 新增功課 Model
-                alert("新增成功");
-                showLessonData($(".lesson-list").index(".lesson-list-chosen"));
-            },
-            error: function (jqXHR/* XMLHttpRequest */, textStatus, errorThrown) {
-                console.log(`作業新增失敗：${jqXHR.responseText}`);
-                alert(`作業新增失敗\n\n錯誤訊息：${jqXJR.responseText}`);
-                showLessonData($(".lesson-list").index(".lesson-list-chosen"));
-            }
-        })
-    }
+    $.ajax({
+        url: "/course/updtHw",
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function (res) {
+            alert("更新成功");
+            hwCreateUpdateModal.hide();
+            fetchLessons();
+            showLessonData($(".lesson-list").index(".lesson-list-chosen"));
+        },
+        error: function (jqXHR/* XMLHttpRequest */, textStatus, errorThrown) {
+            console.log(`作業更新失敗：${jqXHR.responseText}`);
+            alert(`作業新增失敗\n\n錯誤訊息：${jqXJR.responseText}`);
+            fetchLessons();
+            showLessonData($(".lesson-list").index(".lesson-list-chosen"));
+        }
+    })
 }
+// Helper function to compare two links arrays without _id
+function areLinksDifferent(inputLinks, originalLinks) {
+    if (inputLinks.length !== originalLinks.length) {
+        return true;
+    }
+    for (let i = 0; i < inputLinks.length; i++) {
+        if (inputLinks[i].url !== originalLinks[i].url) {
+            return true;
+        }
+    }
+    return false;
+}
+
 
 function removeHomework(lesson_id, hw_id) {
     let isDelete = confirm("確定要刪除作業？\n刪除後無法復原");
@@ -355,10 +696,14 @@ function removeHomework(lesson_id, hw_id) {
         })
             .done((data) => {
                 alert("刪除成功！");
+                fetchLessons();
+                showLessonData($(".lesson-list").index(".lesson-list-chosen"));
             })
             .fail((jqXHR, textStatus, errorThrown) => {
                 console.log(`作業刪除失敗：${jqXHR.responseText}`);
                 alert(`作業刪除失敗\n\n錯誤訊息：${jqXHR.responseText}`);
+                fetchLessons();
+                showLessonData($(".lesson-list").index(".lesson-list-chosen"));
             })
         let originHwList = $("#l-homeworks tbody tr");
         originHwList.each(function () {
@@ -674,6 +1019,8 @@ function showAiAnalysisModal(hwId) {
 }
 
 function courseAnalysis(hwId) {
+    // Disable ana btn
+    $("#courseAnaBtn").prop('disabled', true);
     // Reset display
     $("#aiAnalysisModal .modal-body").addClass("placeholder-glow");
     $("#mutualKeywords").empty().addClass("w-75 placeholder");
@@ -684,9 +1031,12 @@ function courseAnalysis(hwId) {
 
     $.post("/course/aiAnalyze", { anaType: "byCourse", hwId, semesterName: currentSemester.name })
         .done((data) => {
+            // Enable ana btn
+            $("#courseAnaBtn").prop('disabled', false);
+
             $("#aiAnalysisModal .modal-body").removeClass("placeholder-glow");
             $("#mutualKeywords").removeClass("w-75 placeholder");
-            
+
             let resData = JSON.parse(data);
             // Mutual keywords
             resData.highFreqKeywords.forEach((kw) => {
@@ -706,6 +1056,12 @@ function courseAnalysis(hwId) {
             funcUsageCanvas_all.update();
         })
         .fail((xhr, status, error) => {
+            // Enable ana btn
+            $("#courseAnaBtn").prop('disabled', false);
+
+            $("#aiAnalysisModal .modal-body").removeClass("placeholder-glow");
+            $("#mutualKeywords").removeClass("w-75 placeholder");
+
             console.log(`分析全班作業失敗：${xhr.responseText}`);
             alert(`分析全班作業失敗：${xhr.responseText}`);
         })
@@ -935,7 +1291,7 @@ function showLessonData(lessonIndex) {
                     <button type="button" class="btn btn-danger">-</button>
                     <a href="${up.path}" target="_blank">${up.name}</a>
                 `}).join('') : ''}
-                <button type="button" class="btn btn-outline-dark">修改</button>
+                <button type="button" class="btn btn-outline-dark" onclick="showHwCreateUpdateModal(false, '${lesson._id}', '${hw._id}')">修改</button>
                 <button type="button" class="btn btn-outline-danger" onclick="removeHomework('${lesson._id}', '${hw._id}')">刪除</button>
                 <button type="button" class="btn btn-outline-primary" onclick="showCorrectHomeworkModal('${hw._id}', '${hw.name}', ${hw.isAnalysis}, '${hw.attribute}', ${hw.isHandInByIndividual})">批改</button>
                 ${hw.isAnalysis ? `<button type="button" class="btn btn-outline-success" onclick="showAiAnalysisModal('${hw._id}')">AI 分析</button>` : ``}

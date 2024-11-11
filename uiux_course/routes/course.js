@@ -424,9 +424,116 @@ router.post("/addHw", isAuth, isTeacher, upload.any('files'), async function (re
 
         res.sendStatus(200);
     } catch (error) {
-        console.error("Add homework error: ", error);
-        console.trace();
-        res.sendStatus(500)
+        now = Date.now();
+        console.error(`Add homework error\n${error.stack()}\n${now}`);
+        res.sendStatus(500).send(`Add homework error\n${now}`);
+    }
+});
+
+router.post("/updtHw", isAuth, isTeacher, upload.any('newFiles'), async (req, res) => {
+    try {
+        const {
+            lessonId,
+            hwId,
+            hwName,
+            description,
+            links,
+            attribute,
+            isAnalysis,
+            isHandInByIndividual,
+            isRegular,
+            isCatCustom,
+            categories,
+            deleteFiles
+        } = req.body;
+
+        const lesson = await lessonModel.findOne({ _id: lessonId });
+        if (!lesson) {
+            now = Date.now();
+            console.log(`單元找不到\n${now}`);
+            res.status(404).send(`單元找不到\n${now}`);
+        }
+
+        const hw = lesson.hws.find(hw => hw._id == hwId);
+        if (!hw) {
+            now = Date.now();
+            console.log(`作業找不到\n${now}`);
+            res.status(404).send(`作業找不到\n${now}`);
+        }
+
+        // 更新基本欄位
+        if (hwName) hw.name = hwName;
+        if (description) hw.description = description;
+        if (attribute) hw.attribute = attribute;
+        hw.isAnalysis = isAnalysis === "true";
+        hw.isHandInByIndividual = isHandInByIndividual === "true";
+        hw.isRegular = isRegular === "true";
+        hw.isCatCustom = isCatCustom === "true";
+
+        // 更新連結
+        if (links) {
+            const parsedLinks = JSON.parse(links);
+            hw.links = parsedLinks;
+        }
+
+        // 更新主題分類
+        if (categories) {
+            const parsedCategories = JSON.parse(categories);
+            hw.categories = parsedCategories;
+        }
+
+        // 處理新增的檔案
+        if (req.files) {
+            req.files.forEach(file => {
+                hw.files.push({
+                    name: file.originalname,
+                    path: file.path,
+                    contentType: file.mimetype
+                });
+            });
+        }
+
+        // 處理刪除的檔案
+        if (deleteFiles) {
+            const filesToDelete = JSON.parse(deleteFiles);
+            hw.files = hw.files.filter(file => {
+                if (filesToDelete.includes(file._id.toString())) {
+                    // 刪除檔案
+                    fs.unlink((file.path), err => {
+                        if (err) console.error(`作業更新失敗 - 檔案刪除錯誤:\n${err.stack}\n${Date.now()}`);
+                    });
+                    return false;
+                }
+                return true;
+            });
+        }
+
+        await lesson.save();
+        res.sendStatus(200);
+    } catch (error) {
+        now = Date.now();
+        console.log(`更新作業失敗:\n${error.stack}\n${now}`);
+        res.send(500).status();
+    }
+});
+
+router.post("/getHwInfo", isAuth, isTeacher, async function (req, res, next) {
+    try {
+        const { lessonId, hwId } = req.body;
+
+        const hwObj = await lessonModel.findOne({ _id: lessonId, 'hws._id': hwId }, { 'hws.$': 1 }); // .$ 符合的文，1 返回，0 不返回
+        const hw = hwObj.hws[0];
+        if (!hw) {
+            now = Date.now();
+            console.log("作業找不到 " + now);
+            return res.status(404).send("作業找不到\n" + now);
+        }
+
+        res.send(JSON.stringify(hw));
+    } catch (error) {
+        now = Date.now();
+        console.error(`Get homework error\n${error.stack}\n${now}`);
+        res.status(500).send('作業找不到\n' + now);
     }
 });
 
@@ -1029,7 +1136,7 @@ router.post("/aiAnalyze", async (req, res) => {
                             }
                         )
                     }
-                    const reQueryData = await submissionModel.findOne({hwId, "submissions._id": submissionId}, {'submissions.$': 1});
+                    const reQueryData = await submissionModel.findOne({ hwId, "submissions._id": submissionId }, { 'submissions.$': 1 });
 
                     res.send(JSON.stringify(reQueryData.submissions[0].analysis.result));
                 } catch (error) {
@@ -1051,7 +1158,7 @@ router.post("/aiAnalyze", async (req, res) => {
                     // Course analyze
                     const gptRes = await gptReqTxt(JSON.stringify(hw.analysis.figJam.cats), aiAnaPrompts.coursePrompt.content.replace(/\n+/g, '').trim());
                     let resContent = JSON.parse(gptRes.message.content.replace("```json", "").replace("```", ""));
-                    
+
                     // Save analyze result
                     await lessonModel.updateOne(
                         { "hws._id": hwId },
@@ -1064,7 +1171,7 @@ router.post("/aiAnalyze", async (req, res) => {
                     )
 
                     // Query analyze data from db
-                    const reQueryData = await lessonModel.findOne({semester: semesterName, 'hws._id': hwId}, {'hws.$': 1});
+                    const reQueryData = await lessonModel.findOne({ semester: semesterName, 'hws._id': hwId }, { 'hws.$': 1 });
 
                     res.send(JSON.stringify(reQueryData.hws[0].analysis.figJam));
                 } catch (error) {

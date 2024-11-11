@@ -511,6 +511,12 @@ function analyzeHw(hwId, submissionId) {
                 `);
         })
         .fail((xhr, status, error) => {
+            $(`#collapseStuId${submissionId} .accordion-body`).empty();
+            $(`#collapseStuId${submissionId}`).removeClass("placeholder-glow");
+            $(`#collapseStuId${submissionId} .accordion-body`).append(`
+                <p>暫無分析結果 😵‍💫</p>
+                <button type="button" class="btn btn-outline-dark" onclick="analyzeHw('${hwId}', '${submissionId}')">分析</button>
+                `);
             console.log(`AI 分析失敗：${xhr.responseText}`);
             alert(`AI 分析失敗\n\n錯誤訊息：${xhr.responseText}`);
         })
