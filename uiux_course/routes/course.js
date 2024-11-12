@@ -715,7 +715,7 @@ router.post("/exportGrades", isAuth, isTeacher, async (req, res) => {
             console.log(`輸出成績錯誤: 找不到作業繳交資料`);
             return res.status(404).send('輸出成績錯誤: 找不到作業繳交資料.\n' + now);
         }
-        
+
         // Create excel workbook
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet(`${hwName}成績`);
@@ -988,47 +988,41 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
         const files = req.files;
         let fileInfos = [];
         const { semester, hwId, links, catName, catId } = req.body;
-        // files
+
+        // 處理上傳文件
         if (files && files.length > 0) {
             const filePromises = files.map((file) => {
                 const { path, originalname, mimetype } = file;
-
-                return new Promise(async (resolve, reject) => {
+                return new Promise((resolve, reject) => {
                     fs.readFile(path, (err, data) => {
-                        if (err) {
-                            return reject(err);
-                        }
-
+                        if (err) return reject(err);
                         const fileInfo = {
                             name: originalname,
                             path: path,
                             contentType: mimetype
-                        }
-
+                        };
                         resolve(fileInfo);
-                    })
-                })
-            })
+                    });
+                });
+            });
             fileInfos = await Promise.all(filePromises);
         }
 
-        // Find the lesson by id
+        // 查找作業
         const hwObj = await lessonModel.findOne({ semester, 'hws._id': hwId }, { 'hws.$': 1 });
         const hw = hwObj.hws[0];
         if (!hw) {
-            now = Date.now();
-            console.log("找不到作業 " + now);
-            return res.status(404).send("找不到作業\n" + now);
+            console.log("找不到作業 " + Date.now());
+            return res.status(404).send("找不到作業\n" + Date.now());
         }
 
-        // Group hand in
-        if (hw.attribute == 'g' && !hw.isHandInByIndividual) {
-            let category = hw.categories.id(catId);
+        let submissionId = null;
 
+        if (hw.attribute === 'g' && !hw.isHandInByIndividual) {
+            let category = hw.categories.id(catId);
             if (!category) {
-                now = Date.now();
-                console.log('找不到組別 ' + now);
-                return res.status(404).send('找不到組別，請先加入、新增組別！\n' + now);
+                console.log('找不到組別 ' + Date.now());
+                return res.status(404).send('找不到組別，請先加入、新增組別！\n' + Date.now());
             }
 
             for (let member of category.member) {
@@ -1036,18 +1030,13 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
                     studentId: member.studentID,
                     isHandIn: true,
                     studentName: member.studentName,
-                    handInData: {
-                        links: JSON.parse(links),
-                        files: fileInfos
-                    },
+                    handInData: { links: JSON.parse(links), files: fileInfos },
                     category: { name: category.name, catId: category._id },
-                    analysis: {
-                        result: []
-                    }
+                    analysis: { result: [] }
                 };
 
                 const result = await submissionModel.updateOne(
-                    { hwId: hwId, "submissions.studentId": member.studentID }, // Query to find specific student submission
+                    { hwId: hwId, "submissions.studentId": member.studentID },
                     {
                         $set: {
                             "submissions.$.isHandIn": newSubmissionData.isHandIn,
@@ -1056,72 +1045,113 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
                             "submissions.$.analysis": newSubmissionData.analysis,
                         }
                     },
-                    { upsert: false } // Do not create a new document for this operation
+                    { upsert: false }
                 );
 
-                // If no document was updated (i.e., no existing submission for this student), push a new one
                 if (result.modifiedCount === 0) {
-                    await submissionModel.updateOne(
+                    const updateResult = await submissionModel.updateOne(
                         { hwId: hwId },
-                        {
-                            $push: {
-                                submissions: newSubmissionData // Add the new submission data
-                            }
-                        },
-                        { upsert: false } // Ensure the document exists, but don't create a new one
+                        { $push: { submissions: newSubmissionData } },
+                        { upsert: false, new: true }
                     );
+                    submissionId = updateResult.upsertedId ? updateResult.upsertedId : null;
+                } else {
+                    const updatedDoc = await submissionModel.findOne({ hwId: hwId, "submissions.studentId": member.studentID }, { "submissions.$": 1 });
+                    submissionId = updatedDoc.submissions[0]._id;
                 }
             }
-
-            res.sendStatus(200);
+            res.status(200).send({ submissionId });
         } else {
             let newSubmissionData = {
                 studentId: stu.studentID,
                 isHandIn: true,
                 studentName: stu.name,
-                handInData: {
-                    links: JSON.parse(links),
-                    files: fileInfos
-                },
+                handInData: { links: JSON.parse(links), files: fileInfos },
                 category: { name: catName, catId },
-                analysis: {
-                    result: []
-                }
+                analysis: { result: [] }
             };
 
             const result = await submissionModel.updateOne(
-                // TODO hwId 留一個就好 
-                { hwId: hwId, "submissions.studentId": stu.studentID }, // Query to find the specific student submission
+                { hwId: hwId, "submissions.studentId": stu.studentID },
                 {
                     $set: {
-                        // Update data if student submission exists
                         "submissions.$.isHandIn": newSubmissionData.isHandIn,
                         "submissions.$.handInData": newSubmissionData.handInData,
                         "submissions.$.category": newSubmissionData.category,
                         "submissions.$.analysis": newSubmissionData.analysis,
                     }
                 },
-                { upsert: false } // Do not create a new document for this operation
+                { upsert: false }
             );
 
-            // If no document was updated (i.e., no existing submission for this student), push a new one
             if (result.modifiedCount === 0) {
-                await submissionModel.updateOne(
+                const updateResult = await submissionModel.updateOne(
                     { hwId: hwId },
-                    {
-                        $push: {
-                            submissions: newSubmissionData // Add the new submission data
-                        }
-                    },
-                    { upsert: false } // Ensure the document exists, but don't create a new one
+                    { $push: { submissions: newSubmissionData } },
+                    { upsert: false, new: true }
                 );
+                submissionId = updateResult.upsertedId ? updateResult.upsertedId : null;
+            } else {
+                const updatedDoc = await submissionModel.findOne({ hwId: hwId, "submissions.studentId": stu.studentID }, { "submissions.$": 1 });
+                submissionId = updatedDoc.submissions[0]._id;
             }
-            res.send(200);
+            res.status(200).send({ submissionId });
         }
     } catch (error) {
+        console.log(`Homework submit error： ${error} ${Date.now()}`);
+        return res.status(500).send("/?err=Homework submit error\n" + Date.now());
+    }
+});
+
+
+router.post("/lesson/rmHomeworkSubmission", isAuth, async (req, res) => {
+    const { type, hwId, submissionId, objId } = req.body;
+    try {
+        if (!objId) {
+            now = Date.now();
+            console.log(`刪除作業連結 / 檔案失敗：沒有傳入 link 或 file Id\n${now}`);
+            res.status(500).send(`刪除作業連結 / 檔案失敗：\n\n${now}`);
+            return;
+        }
+
+        const submission = await submissionModel.findOne({ hwId });
+        const subDoc = submission.submissions.id(submissionId);
+        if (!submission) {
+            now = Date.now();
+            console.log(`刪除檔案失敗：找不到 Submission${now}`);
+            return res.status(404).status(`刪除檔案失敗：找不到提交作業資訊${now}`);
+        }
+
+        // type - 0: file, 1: link
+        if (type == 0) {
+            const file = subDoc.handInData.files.id(objId);
+            if (!file) {
+                now = Date.now();
+                console.log(`刪除檔案失敗：找不到檔案資料${now}`);
+                return res.status(404).status(`刪除檔案失敗：找不到檔案資料${now}`);
+            }
+
+            subDoc.handInData.files.pull({ _id: objId });
+            await submission.save();
+
+            // Remove the actual file from the file system
+            try {
+                await removeFile(path.resolve(file.path));
+                console.log("File deleted from local storage:", file.path);
+            } catch (fsError) {
+                now = Date.now();
+                console.error("Failed to delete file from local storage:", fsError + now);
+            }
+        } else {
+            // Use pull to remove the link by its _id
+            subDoc.handInData.links.pull({ _id: objId });
+            await submission.save();
+        }
+        res.sendStatus(200);
+    } catch (error) {
         now = Date.now();
-        console.log(`Homework submit error： ${error} ${now}`);
-        return res.status(500).send("/?err=Homework submit error\n" + now);
+        console.log(`刪除作業連結 / 檔案失敗：\n${error.stack}\n${now}`);
+        res.status(500).send(`刪除作業連結 / 檔案失敗：\n\n${now}`);
     }
 });
 
@@ -1400,5 +1430,14 @@ async function compressImageToBase64(inputPath) {
         return res.status(500).send("/?err=Error compressing image\n" + now);
     }
 }
+
+const removeFile = (filePath) => {
+    return new Promise((resolve, reject) => {
+        fs.unlink(filePath, (err) => {
+            if (err) reject(err);
+            else resolve();
+        });
+    });
+};
 
 module.exports = router;

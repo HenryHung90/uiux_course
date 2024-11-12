@@ -245,19 +245,19 @@ async function showLessonData(lessonIndex) {
                     ${hw.submission.handInData.files ?
             hw.submission.handInData.files.map(file => `
                         <li class="d-flex align-items-center">    
-                            <button type="button" class="btn btn-danger me-1">-</button> 
+                            <button type="button" class="btn btn-danger me-1" onclick="rmHwSubmission(0, '${hw._id}', '${hw.submission._id}', '${file._id}')">-</button> 
                             <a href="/course/getHw/${hw._id}/${file._id}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;"><img src="./images/file.svg" alt=""></a>
                         </li>
                     `).join('') : ''}
                     ${hw.submission.handInData.links ?
             hw.submission.handInData.links.map(link => `
                         <li>    
-                            <button type="button" class="btn btn-danger">-</button> 
+                            <button type="button" class="btn btn-danger" onclick="rmHwSubmission(1, '${hw._id}', '${hw.submission._id}', '${link._id}')">-</button> 
                             <a href="${link.url}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;"><img src="./images/link.svg" alt=""></a>
                         </li>
                     `).join('') : ''}
                 </ul>
-                <button type="button" class="btn btn-outline-dark" onclick="showHandInHwModal('${hw.name}', '${hw._id}', '${hw.submission.category.name}', '${hw.submission.category.catId}')">+</button>
+                <button type="button" class="btn btn-outline-dark" onclick="showHandInHwModal('${hw.name}', '${hw._id}', '${hw.submission.category.name}', '${hw.submission.category.catId}', ${hw.isAnalysis})">+</button>
             </td>
             <td> 
                 ${hw.isAnalysis ? `
@@ -431,7 +431,7 @@ const category = {
     },
 }
 
-function showHandInHwModal(hwName = "", hw_id = "", catName = "", catId = "") {
+function showHandInHwModal(hwName = "", hw_id = "", catName = "", catId = "", isAnalysis = false) {
     let modalBody = `
         <div class="mb-3" id="hwAddLink">
             <div class="form-label">
@@ -474,8 +474,11 @@ function showHandInHwModal(hwName = "", hw_id = "", catName = "", catId = "") {
             data: formData,
             processData: false,
             contentType: false,
-            success: function (res) {
+            success: function (data) {
                 alert("提交成功！🤟🏻");
+                shareStuffModal.hide();
+                showLessonData(0);
+                if(isAnalysis) analyzeHw(hw_id, data.submissionId);
             },
             error: function (jqXHR, textStatus, errorThrown) {
                 console.log(`作業提交失敗：${jqXHR.responseText}`);
@@ -486,6 +489,29 @@ function showHandInHwModal(hwName = "", hw_id = "", catName = "", catId = "") {
     shareStuffModal.setData(`繳交作業-${hwName}`, modalBody, modalFooter);
     $("#submitHwBtn").on("click", () => { shareStuffModal.callCustomFunction("submitHomework"); });
     shareStuffModal.show();
+}
+
+/**
+ * 
+ * @param {*} type - 0: file, 1: link 
+ * @param {*} hwId 
+ * @param {*} submissionId 
+ * @param {*} objId 
+ */
+function rmHwSubmission(type, hwId, submissionId, objId) {
+    let isDelete = confirm(`確定要刪除${type == 0 ? "檔案" : "連結"}?\n刪除後無法復原`);
+    if (isDelete) {
+        $.post("/course/lesson/rmHomeworkSubmission", { type, hwId, submissionId, objId })
+            .done((data) => {
+                // Fetch and render update data 
+                showLessonData(0);
+                alert(`${type == 0 ? "檔案" : "連結"}刪除成功`);
+            })
+            .fail((xhr, status, error) => {
+                console.log(`刪除檔案 / 連結失敗！：${xhr.responseText}`);
+                alert(`刪除檔案 / 連結失敗！\n\n錯誤訊息：${xhr.responseText}`);
+            })
+    }
 }
 
 function analyzeHw(hwId, submissionId) {
