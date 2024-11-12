@@ -10,6 +10,7 @@ const memberModel = require('../model/member');
 const submissionModel = require("../model/submission");
 const sharp = require('sharp');
 
+const ExcelJS = require('exceljs');
 const OpenAI = require('openai');
 const { title } = require('process');
 const { error } = require('console');
@@ -700,10 +701,91 @@ router.post("/lesson/submitGrade", isAuth, isTeacher, async (req, res, next) => 
         res.sendStatus(200);
     } catch (error) {
         now = Date.now();
-        console.log("SubmitGrade error:  " + error + now);
+        console.log("SubmitGrade error:  " + error.stack + now);
         return res.status(500).send('SubmitGrade error.\n' + now);
     }
 });
+
+router.post("/exportGrades", isAuth, isTeacher, async (req, res) => {
+    const { hwId, hwName } = req.body;
+    try {
+        const submission = await submissionModel.findOne({ hwId });
+        if (!submission) {
+            now = Date.now();
+            console.log(`輸出成績錯誤: 找不到作業繳交資料`);
+            return res.status(404).send('輸出成績錯誤: 找不到作業繳交資料.\n' + now);
+        }
+        
+        // Create excel workbook
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet(`${hwName}成績`);
+
+        worksheet.columns = [
+            { header: "學號", key: "sId" },
+            { header: "姓名", key: "sName" },
+            { header: "成績", key: "sGrade" },
+            { header: "評語", key: "sFeedback" },
+            { header: "主題", key: "sCategory" },
+        ]
+
+        submission.submissions.forEach((sub) => {
+            worksheet.addRow({
+                sId: sub.studentId,
+                sName: sub.studentName,
+                sGrade: sub.score,
+                sFeedback: sub.feedback,
+                sCategory: sub.category.name || ''
+            });
+        });
+
+        // Set column width based on the longest value
+        worksheet.columns.forEach((column) => {
+            let maxLength = 0;
+            column.eachCell({ includeEmpty: true }, (cell) => {
+                const cellValue = cell.value ? String(cell.value) : '';
+                maxLength = Math.max(maxLength, cellValue.length);
+            });
+            // Set width to the longest value length with some padding (e.g., +2)
+            column.width = maxLength + 15;
+        });
+
+        // Set font size 
+        worksheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+            row.eachCell({ includeEmpty: true }, (cell) => {
+                if (rowNumber == 1) {  // Skip the first row (header)
+                    cell.font = { size: 16, bold: true }; // Set font size and make it bold
+                    return;
+                }
+                cell.font = { size: 15 };  // Set font size for each cell in the row
+            });
+        });
+
+        worksheet.views = [
+            {
+                state: 'frozen', // Freeze rows and columns
+                xSplit: 0, // Horizontal split position (none in this case)
+                ySplit: 1, // Freeze at row 1 (header row)
+                topLeftCell: 'A2', // Top-left cell (first visible cell after freeze)
+            },
+        ];
+
+
+        // 告訴瀏覽器，返回 excel 檔案
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        // Sanitize the hwName to ensure it is safe for HTTP headers
+        let sanitizedHwName = hwName.replace(/[^a-zA-Z0-9_\-\.]/g, '_'); // Replace unsafe characters
+        const encodedFilename = encodeURIComponent(`${sanitizedHwName}成績.xlsx`);
+        // 告訴瀏覽器，觸發檔案下載，不是頁面顯示檔案，並指定下載檔名
+        res.setHeader('Content-Disposition', `attachment; filename="${encodedFilename}"`);
+
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (error) {
+        now = Date.now();
+        console.log(`輸出成績錯誤: ${error.stack} ${now}`);
+        return res.status(500).send('輸出成績錯誤.\n' + now);
+    }
+})
 
 router.post('/lesson/getGroupList', isAuth, isTeacher, async (req, res, next) => {
     try {
@@ -722,7 +804,7 @@ router.post('/lesson/getGroupList', isAuth, isTeacher, async (req, res, next) =>
         res.send(JSON.stringify(rtnMap));
     } catch (error) {
         now = Date.now();
-        console.log(`Error fetching groupList: ${error} ${now}`);
+        console.log(`Error fetching groupList: ${error.stack} ${now}`);
         return res.status(500).send('Error fetching groupList.\n' + now);
     }
 });
@@ -744,7 +826,7 @@ router.post('/addSemester', isAuth, isTeacher, async function (req, res, next) {
         res.sendStatus(201);
     } catch (error) {
         now = Date.now();
-        console.log(`Error uploading the file: ${error} ${now}`);
+        console.log(`Error uploading the file: ${error.stack} ${now}`);
         return res.status(500).send('Error uploading the file.\n' + now);
     }
 });
@@ -755,7 +837,7 @@ router.post("/fetchSemesters", isAuth, isTeacher, async function (req, res, next
         res.send(JSON.stringify(semester));
     } catch (e) {
         now = Date.now();
-        console.log(`Finding lessons error: ${error} ${now}`);
+        console.log(`Finding lessons error: ${error.stack} ${now}`);
         return res.status(500).send('Finding lessons error.\n' + now);
     }
 });
