@@ -730,6 +730,8 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
     // Fetch hand ins and calculate hand in status
     $.post("/course/fetchHomework", { semester_id: currentSemester.id, hw_id, attribute })
         .done((data) => {
+            // Binding export btn event
+            $("#exportGrades").on("click", () => exportGrades(hw_id, hw_name));
             let resData = JSON.parse(data);
             let submissions = resData.submissions;
             $("#submissionTable").attr("hwId", hw_id);
@@ -924,6 +926,52 @@ function showCorrectHomeworkModal(hw_id, hw_name, isAnalysis, attribute, isHandI
             console.log(`更新繳交作業失敗：${xhr.responseText}`);
             alert(`更新繳交作業失敗\n\n錯誤訊息：${xhr.responseText}`);
         })
+}
+
+function exportGrades(hwId, hwName) {
+    $.ajax({
+        url: "/course/exportGrades",
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ hwId, hwName }),
+        xhrFields: {
+            responseType: 'blob'
+        },
+        success: function (data) {
+            const url = window.URL.createObjectURL(new Blob([data]));
+            const a = document.createElement('a');
+            a.href = url;
+            // Download file name
+            a.download = `${hwName}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        },
+        error: function (xhr) {
+            if (xhr.response instanceof Blob) {
+                const reader = new FileReader();
+                reader.onload = function () {
+                    try {
+                        // Try to parse as JSON
+                        const errorMessage = JSON.parse(reader.result);
+                        console.log(`輸出成績失敗：${errorMessage}`);
+                        alert(`輸出成績失敗\n\n錯誤訊息：${errorMessage}`);
+                    } catch (e) {
+                        // If not JSON, show as text
+                        console.log(`輸出成績失敗：${reader.result}`);
+                        alert(`輸出成績失敗\n\n錯誤訊息：${reader.result}`);
+                    }
+                };
+                reader.readAsText(xhr.response);
+                alert(`輸出成績失敗\n\n錯誤訊息：${xhr.responseText}`);
+            }
+            else {
+                console.error('Server responded with an unexpected data type:', xhr.response);
+                alert(`輸出成績失敗\n\n錯誤訊息：${xhr.responseText + Date.now() || 'An unexpected error occurred.' + Date.now()}`);
+            }
+        }
+    });
 }
 
 function showAiAnalysisModal(hwId) {
