@@ -1016,8 +1016,6 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
             return res.status(404).send("找不到作業\n" + Date.now());
         }
 
-        let submissionId = null;
-
         if (hw.attribute === 'g' && !hw.isHandInByIndividual) {
             let category = hw.categories.id(catId);
             if (!category) {
@@ -1049,18 +1047,18 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
                 );
 
                 if (result.modifiedCount === 0) {
-                    const updateResult = await submissionModel.updateOne(
+                    await submissionModel.updateOne(
                         { hwId: hwId },
                         { $push: { submissions: newSubmissionData } },
                         { upsert: false, new: true }
                     );
-                    submissionId = updateResult.upsertedId ? updateResult.upsertedId : null;
-                } else {
-                    const updatedDoc = await submissionModel.findOne({ hwId: hwId, "submissions.studentId": member.studentID }, { "submissions.$": 1 });
-                    submissionId = updatedDoc.submissions[0]._id;
                 }
             }
-            res.status(200).send({ submissionId });
+
+            // Re query submission
+            const submissions = await submissionModel.findOne({ hwId });
+            const submission = submissions.submissions.find(sub => sub.studentId == stu.studentID);
+            res.status(200).send({ submissionId: submission._id });
         } else {
             let newSubmissionData = {
                 studentId: stu.studentID,
@@ -1085,17 +1083,17 @@ router.post("/lesson/submitHomework", isAuth, upload.any('files'), async (req, r
             );
 
             if (result.modifiedCount === 0) {
-                const updateResult = await submissionModel.updateOne(
+                await submissionModel.updateOne(
                     { hwId: hwId },
                     { $push: { submissions: newSubmissionData } },
                     { upsert: false, new: true }
                 );
-                submissionId = updateResult.upsertedId ? updateResult.upsertedId : null;
-            } else {
-                const updatedDoc = await submissionModel.findOne({ hwId: hwId, "submissions.studentId": stu.studentID }, { "submissions.$": 1 });
-                submissionId = updatedDoc.submissions[0]._id;
             }
-            res.status(200).send({ submissionId });
+
+            // Re query submission
+            const submissions = await submissionModel.findOne({ hwId });
+            const submission = submissions.submissions.find(sub => sub.studentId == stu.studentID);
+            res.status(200).send({ submissionId: submission._id });
         }
     } catch (error) {
         console.log(`Homework submit error： ${error} ${Date.now()}`);
