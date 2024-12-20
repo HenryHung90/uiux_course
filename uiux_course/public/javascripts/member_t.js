@@ -990,30 +990,6 @@ function showAiAnalysisModal(hwId) {
                 $("#mutualKeywords").append(`<span class="badge text-bg-dark m-1">#${kw}</span>`);
             })
 
-            // new Chart($("#funcUsageCanvas_all"), {
-            //     type: 'bar',
-            //     data: {
-            //         labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
-            //         datasets: [{
-            //             data: [12, 19, 3, 5, 2, 3],
-            //             borderWidth: 1,
-            //             backgroundColor: ['#D04848', '#F3B95F', '#FDE767', '#6895D2']
-            //         }]
-            //     },
-            //     options: {
-            //         plugins: {
-            //             legend: {
-            //                 display: false // 隱藏圖例
-            //             }
-            //         },
-            //         indexAxis: 'y',
-            //         scales: {
-            //             y: {
-            //                 beginAtZero: true
-            //             }
-            //         }
-            //     }
-            // });
             // figJam func usage diagram
             let labels = [];
             let datas = [];
@@ -1032,7 +1008,7 @@ function showAiAnalysisModal(hwId) {
                 resData.cats.forEach((cat) => {
                     console.log(cat);
                     $("#ana-cats").append(`
-                        <div class="col-12 col-lg-4 mb-3">
+                        <div class="col-12 col-lg-6 mb-3">
                             <div class="card"> 
                                 <div class="card-header">${cat.name}</div>
                                     <div class="card-body"> 
@@ -1041,12 +1017,43 @@ function showAiAnalysisModal(hwId) {
                                             ${cat.keywords.length > 0 ?
                             cat.keywords.map(kw => `<span class="badge text-bg-secondary m-1">#${kw}</span>`).join('') : ''}
                                         </p>
-                                        <h6 class="card-title">討論 pattern</h6>
-                                        <p class="card-text">With supporting text below as a natural lead-in to additional content.</p>
+                                        <div class="card-title accordion" id="according-${cat._id}">
+                                            <div class="accordion-item">
+                                                <h2 class="accordion-header">
+                                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accordingChild-${cat._id}" aria-expanded="false" aria-controls="accordingChild-${cat._id}">
+                                                    討論 pattern
+                                                </button>
+                                                </h2>
+                                                <div id="accordingChild-${cat._id}" class="accordion-collapse collapse" data-bs-parent="#according-${cat._id}">
+                                                <div class="p-2 d-flex" style="overflow-x: auto;">
+                                                    ${cat.patterns.map((pa, index) => `
+                                                        <div class="m-2">
+                                                            <h6 style="white-space: nowrap;">step ${index + 1}</h6>
+                                                            <strong style="white-space: nowrap;">討論階段：</strong>
+                                                            <p>${pa.stage}</p>
+                                                            <strong style="white-space: nowrap;">概要：</strong>
+                                                            <p>${pa.summary}</p>
+                                                            <strong style="white-space: nowrap;">工具使用：</strong>
+                                                            <ul>
+                                                                ${pa.tools.map((tool) => `
+                                                                    <li  style="white-space: nowrap;">${tool}</li>
+                                                                `).join('')}
+                                                            </ul>
+                                                            <strong style="white-space: nowrap;">關鍵字：</strong>
+                                                            <p class="card-text">
+                                                                ${pa.keywords.length > 0 ?
+                                    pa.keywords.map(kw => `<span class="badge text-bg-secondary m-1">#${kw}</span>`).join('') : ''}
+                                                            </p>
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                         <h6 class="card-title">使用工具</h6>
                                         <p class="card-text">
                                             ${cat.funcUsage.length ? cat.funcUsage.map(
-                                func => `#${func.name} ${func.times}<br>`).join('') : ''}
+                                        func => `#${func.name} ${func.times}<br>`).join('') : ''}
                                         </p>
                                     </div>
                                 </div>
