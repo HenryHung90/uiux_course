@@ -615,7 +615,7 @@ router.post('/fetchHomework', isAuth, isTeacher, async function (req, res, next)
         // Prepare submissions for students with no submissions
         const newSubmissions = studentsWithNoSubmissions.map(student => ({
             isHandIn: false,
-            studentId: student.studentID || `autoGenId-${Date.now()/100000}`,
+            studentId: student.studentID,
             studentName: student.name,
             handInData: {
                 links: [],
