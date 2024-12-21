@@ -633,12 +633,8 @@ router.post('/fetchHomework', isAuth, isTeacher, async function (req, res, next)
                 result: []
             }
         }));
-        console.log("Before push data");
         submissionArea.submissions.push(...newSubmissions);
-        console.log("after push data");
-        
         await submissionArea.save();
-        console.log("after save data");
         // Query and res result
         let updateSubmissions;
         if (attribute == 'p') {
