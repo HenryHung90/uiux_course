@@ -10,7 +10,7 @@ const lessonSchema = mongoose.Schema({
         path: String,
         contentType: String
     }],
-    links:[{
+    links: [{
         url: String
     }],
     hws: [{
@@ -21,7 +21,7 @@ const lessonSchema = mongoose.Schema({
             path: String,
             contentType: String
         }],
-        links:[{
+        links: [{
             url: String
         }],
         attribute: String, // p: personal, g: group
@@ -49,10 +49,12 @@ const lessonSchema = mongoose.Schema({
                     catId: String,
                     keywords: [String],
                     patterns: [{
-                        funcUsage: String,
-                        // TODO 待調整 pattern 紀錄內容
+                        tools: [String],
+                        stage: String,
+                        summary: String,
+                        keywords: [String]
                     }],
-                    funcUsage:[{
+                    funcUsage: [{
                         name: String,
                         times: String
                     }]

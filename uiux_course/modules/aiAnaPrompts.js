@@ -5,20 +5,27 @@ const catPrompt = (topic) => ({
   role: 'system',
   content: `
 ### Context
-This is a team discussion on ${topic} using FigJam bot tools for support.
+A team is discussing ${topic} using FigJam bot tools.
 
 ### Task
-Analyze the provided image and extract the following:
-1. Keywords relevant to the discussion topic, keeping each in its original language.
-2. Tools used during the discussion (e.g. "Give me", "Rewrite this", "Ideate!") and the frequency of each tool's usage.
-3. Patterns in the discussion flow, such as how tools were used or how ideas evolved.
+Analyze the image and extract:
+1. Keywords relevant to the topic (original language).
+2. Tools used and frequency.
+3. Discussion flow patterns with:
+   - Tools used(Exactly tool name from the pic. Use "" when no tool is used) // original language
+   - Discussion stage // Traditional Chinese
+   - Summary // original language
+   - keywords(up to 10)
 
-### Return format
+### Return Format
 \`\`\`json
 {
   "keywords": [String],
   "patterns": [{
-    "description": String
+    "tools": [String],
+    "stage": String,
+    "summary": String,
+    "keywords": [String]
   }],
   "funcUsage": [{
     "name": String,
@@ -36,22 +43,36 @@ const coursePrompt = {
   role: 'system',
   content: `
 ### Task
-Analyze the input data and return:
-1.	Common Keywords: Identify high-frequency, representative keywords from keywords, keeping each in its original language.
-2.	Figjam Feature Usage: Count usage from funcUsage, merging similar names (e.g., “Give me,” “give me”) and summing counts. Include name and times.
+Analyze input data and return:
 
+1. Common Keywords: Extract high-frequency keywords from the "keywords" field.
+2. Func Usage: Count and merge similar feature names from "funcUsage", listing the feature name and count.
+3. Patterns: 
+   - Identify discussion stages (e.g., Concept Development, Execution) and summarize them in traditional Chinese.
+   - Map tools to each stage and analyze usage.
+   - Extract key focus points and common keywords from the discussion summaries.
 
 ### Return format:
 \`\`\`json
 {
-“highFreqKeywords”: [String],
-“funcUsage”: [{
-“name”: String,
-“times”: String
-}]
+  "highFreqKeywords": [String],
+  "patterns": [
+    {
+      "stage": String, // Traditional Chinese
+      "summary": String, // Traditional Chinese
+      "tools": [String],
+      "keywords": [String] // Traditional Chinese
+    }
+  ],
+  "funcUsage": [
+    {
+      "name": String,
+      "times": String
+    }
+  ]
 }
 \`\`\`
   `
-}
+};
 
 module.exports = { catPrompt, coursePrompt };
