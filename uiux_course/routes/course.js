@@ -591,7 +591,6 @@ router.post('/fetchHomework', isAuth, isTeacher, async function (req, res, next)
             isTeacher: false,
             semester: semester_id
         });
-        console.log("studentsInSemester: "+studentsInSemester);
 
         // Find submission in given hws
         let submissionArea = await submissionModel.findOne({ hwId: hw_id });
@@ -616,7 +615,7 @@ router.post('/fetchHomework', isAuth, isTeacher, async function (req, res, next)
         // Prepare submissions for students with no submissions
         const newSubmissions = studentsWithNoSubmissions.map(student => ({
             isHandIn: false,
-            studentId: student.studentID,
+            studentId: student.studentID || `autoGenId-${Date.now()/100000}`,
             studentName: student.name,
             handInData: {
                 links: [],
