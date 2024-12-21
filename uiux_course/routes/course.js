@@ -612,7 +612,6 @@ router.post('/fetchHomework', isAuth, isTeacher, async function (req, res, next)
         const submittedStudentIds = submissionArea.submissions.map(submission => submission.studentId);
         // Filter out students who haven't submitted
         studentsWithNoSubmissions = studentsInSemester.filter(student => !submittedStudentIds.includes(student.studentID));
-        console.log("studentsWithNoSubmissions: "+studentsWithNoSubmissions);
 
         // Prepare submissions for students with no submissions
         const newSubmissions = studentsWithNoSubmissions.map(student => ({
