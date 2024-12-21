@@ -636,6 +636,7 @@ router.post('/fetchHomework', isAuth, isTeacher, async function (req, res, next)
         console.log("Before push data");
         console.log(...newSubmissions);
         submissionArea.submissions.push(...newSubmissions);
+        console.log("submissionArea.submissions\n"+submissionArea.submissions);
         console.log("after push data");
         
         await submissionArea.save();
